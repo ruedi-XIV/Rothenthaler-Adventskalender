@@ -1281,3 +1281,15 @@ body{
 
     line-height:1.2;
 }
+/* Smartphone im Querformat kleiner darstellen */
+@media (max-height: 500px) and (orientation: landscape) {
+    #kalender {
+        width: 90vw;
+        max-width: 1200px;
+    }
+
+    #testbereich {
+        transform: scale(0.8);
+        transform-origin: right bottom;
+    }
+}
