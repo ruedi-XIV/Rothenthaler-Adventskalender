@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Rothenthaler Adventskalender</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="kalender">
+
+        <img
+            src="bilder/adventskalender.png"
+            id="kalenderbild"
+            alt="Rothenthaler Adventskalender">
+
+        <div id="tuerchen-container"></div>
+<div class="kalender-datum">
+    <div class="datum-text">Heute ist der</div>
+    <div id="aktuelles-datum"></div>
+</div>
+    </div>
+
+
+    <!-- Abschiedsgruß nach dem Video -->
+    <div
+        id="abschiedsgruss"
+        class="abschiedsgruss verborgen"
+        aria-live="polite">
+
+        <div
+            id="abschiedsschnee"
+            class="abschiedsschnee"
+            aria-hidden="true">
+        </div>
+
+        <div class="abschiedsgruss-inhalt">
+            <p id="abschiedszeile-1"></p>
+            <p id="abschiedszeile-2"></p>
+            <p id="abschiedszeile-3"></p>
+        </div>
+
+    </div>
+
+
+    <!-- Testmodus -->
+    <div id="testbereich">
+
+        <label>
+            <input type="checkbox" id="testmodus">
+            Testmodus
+        </label>
+
+        <select id="testtag" disabled>
+
+            <option value="1">1. Dezember</option>
+            <option value="2">2. Dezember</option>
+            <option value="3">3. Dezember</option>
+            <option value="4">4. Dezember</option>
+            <option value="5">5. Dezember</option>
+            <option value="6">6. Dezember</option>
+            <option value="7">7. Dezember</option>
+            <option value="8">8. Dezember</option>
+            <option value="9">9. Dezember</option>
+            <option value="10">10. Dezember</option>
+            <option value="11">11. Dezember</option>
+            <option value="12">12. Dezember</option>
+            <option value="13">13. Dezember</option>
+            <option value="14">14. Dezember</option>
+            <option value="15">15. Dezember</option>
+            <option value="16">16. Dezember</option>
+            <option value="17">17. Dezember</option>
+            <option value="18">18. Dezember</option>
+            <option value="19">19. Dezember</option>
+            <option value="20">20. Dezember</option>
+            <option value="21">21. Dezember</option>
+            <option value="22">22. Dezember</option>
+            <option value="23">23. Dezember</option>
+            <option value="24">24. Dezember</option>
+
+        </select>
+
+    </div>
+
+
+    <!-- Gruß und Videoplayer -->
+    <div id="video-fenster" class="video-fenster verborgen">
+
+        <div class="video-box">
+
+            <button
+                id="video-schliessen"
+                type="button"
+                aria-label="Video schließen">
+                ×
+            </button>
+
+            <h2 id="video-titel">Türchen</h2>
+
+            <div id="video-gruss" class="video-gruss">
+
+                <strong>Rothenthaler Adventskalender</strong>
+
+                <span id="gruss-tuerchen">
+                    Türchen Nr. 1
+                </span>
+
+                <small>
+                    Viel Frääd beim Aguggn!
+                </small>
+
+            </div>
+
+            <div class="video-bereich verborgen">
+
+                <div
+                    id="youtube-player"
+                    aria-label="Rothenthaler Adventskalender Video">
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- YouTube-API und Kalenderdateien -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="positionen.js"></script>
+    <script src="tuerchen.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
