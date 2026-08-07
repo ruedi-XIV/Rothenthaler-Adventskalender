@@ -1281,15 +1281,32 @@ body{
 
     line-height:1.2;
 }
-/* Smartphone im Querformat kleiner darstellen */
-@media (max-height: 500px) and (orientation: landscape) {
+
+/* Smartphone Querformat */
+@media (max-height: 560px) and (orientation: landscape) {
+
+    body {
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 0;
+        overflow: hidden;
+    }
+
     #kalender {
-        width: 90vw;
-        max-width: 1200px;
+        width: min(96vw, calc((100dvh - 10px) * 1.5));
+        max-width: none;
+        top: 0;
+    }
+
+    #kalenderbild {
+        width: 100%;
+        height: auto;
     }
 
     #testbereich {
-        transform: scale(0.8);
+        right: 6px;
+        bottom: 6px;
+        transform: scale(0.70);
         transform-origin: right bottom;
     }
 }
