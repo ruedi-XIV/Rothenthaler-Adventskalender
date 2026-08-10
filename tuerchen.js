@@ -9,7 +9,6 @@ const tuerchenDaten = [
     { position: 1,  nummer: 1,  video: "kcpmKIsZG2s" },
     { position: 2,  nummer: 12, video: "" },
     { position: 3,  nummer: 18, video: "" },
-    { position: 4,  nummer: 7,  video: "" },
     { position: 4,  nummer: 7,  video: "FuwzN7Iceus" },
     { position: 5,  nummer: 24, video: "" },
     { position: 6,  nummer: 4,  video: "Mbr6ECyWH1o" },
