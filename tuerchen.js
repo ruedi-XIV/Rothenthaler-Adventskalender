@@ -6,14 +6,14 @@
  */
 
 const tuerchenDaten = [
-    { position: 1,  nummer: 1,  video: "kcpmKIsZG2s" },
+    { position: 1,  nummer: 1,  video: "FPFyIU-DQ88" },
     { position: 2,  nummer: 12, video: "" },
     { position: 3,  nummer: 18, video: "" },
     { position: 4,  nummer: 7,  video: "FuwzN7Iceus" },
     { position: 5,  nummer: 24, video: "" },
-    { position: 6,  nummer: 4,  video: "Mbr6ECyWH1o" },
+    { position: 6,  nummer: 4,  video: "MNif_AsHGt0" },
 
-    { position: 7,  nummer: 2,  video: "Y9AzAlPywSs" },
+    { position: 7,  nummer: 2,  video: "BoWrXjudzyY" },
     { position: 8,  nummer: 15, video: "" },
     { position: 9,  nummer: 21, video: "" },
     { position: 10, nummer: 9,  video: "" },
@@ -21,13 +21,13 @@ const tuerchenDaten = [
     { position: 12, nummer: 20, video: "" },
 
     { position: 13, nummer: 11, video: "" },
-    { position: 14, nummer: 3,  video: "ePoFWM18Szs" },
+    { position: 14, nummer: 3,  video: "CNYZAbLJu2A" },
     { position: 15, nummer: 17, video: "" },
-    { position: 16, nummer: 8,  video: "" },
+    { position: 16, nummer: 8,  video: "FFNDp-bR7Cw" },
     { position: 17, nummer: 22, video: "" },
-    { position: 18, nummer: 6,  video: "" },
+    { position: 18, nummer: 6,  video: "eurMlBedWnY" },
 
-    { position: 19, nummer: 5,  video: "Ff6LTENbxcM" },
+    { position: 19, nummer: 5,  video: "JMmIsGf-Npc" },
     { position: 20, nummer: 16, video: "" },
     { position: 21, nummer: 10, video: "" },
     { position: 22, nummer: 23, video: "" },
