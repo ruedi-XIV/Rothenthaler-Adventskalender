@@ -288,6 +288,17 @@ async function videoManuellSchliessen() {
 function videoStarten(videoId) {
     if (youtubeApiBereit && youtubePlayer) {
         youtubePlayer.loadVideoById(videoId);
+
+        window.setTimeout(() => {
+            if (
+                youtubePlayer &&
+                typeof youtubePlayer.getPlayerState === "function" &&
+                youtubePlayer.getPlayerState() !== YT.PlayerState.PLAYING
+            ) {
+                youtubePlayer.playVideo();
+            }
+        }, 500);
+
     } else {
         wartendesVideo = videoId;
     }
