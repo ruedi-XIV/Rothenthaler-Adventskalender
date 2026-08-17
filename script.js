@@ -42,8 +42,7 @@ let aktuellesVideoId = null;
 
 
 /*
- * Wird automatisch von der offiziellen YouTube-IFrame-API aufgerufen,
- * sobald die API vollständig geladen ist.
+ * YouTube-Player
  */
 function onYouTubeIframeAPIReady() {
 
@@ -91,18 +90,35 @@ function onYouTubeIframeAPIReady() {
                 }
             },
 
+
             onStateChange: (ereignis) => {
 
                 if (ereignis.data === YT.PlayerState.PLAYING) {
 
-                    videoStartKnopf.classList.add("verborgen");
+                    if (videoStartKnopf) {
+                        videoStartKnopf.classList.add("verborgen");
+                    }
 
                     window.clearTimeout(startPruefTimer);
                     startPruefTimer = null;
                 }
 
+
                 if (ereignis.data === YT.PlayerState.ENDED) {
                     videoBeendet();
+                }
+            },
+
+
+            /*
+             * WICHTIG FÜR WHATSAPP:
+             * Wenn der Browser Autoplay blockiert,
+             * wird sofort der Startknopf eingeblendet.
+             */
+            onAutoplayBlocked: () => {
+
+                if (videoStartKnopf) {
+                    videoStartKnopf.classList.remove("verborgen");
                 }
             }
         }
@@ -181,9 +197,6 @@ function tuerchenSchliessen() {
         tuer.classList.remove("wird-geoeffnet");
         tuer.classList.remove("geoeffnet");
 
-        /*
-         * Nur eine einzige Schließanimation starten.
-         */
         void tuer.offsetWidth;
 
         tuer.classList.add("wird-geschlossen");
@@ -438,8 +451,8 @@ async function videoManuellSchliessen() {
 
 
 /*
- * Prüft, ob WhatsApp oder ein anderer Browser
- * den automatischen Videostart verhindert hat.
+ * Prüft zusätzlich nach 1,6 Sekunden,
+ * ob das Video wirklich läuft.
  */
 function videoStartPruefen() {
 
@@ -458,22 +471,22 @@ function videoStartPruefen() {
 
             if (status === YT.PlayerState.PLAYING) {
 
-                videoStartKnopf.classList.add(
-                    "verborgen"
-                );
+                if (videoStartKnopf) {
+                    videoStartKnopf.classList.add("verborgen");
+                }
 
             } else {
 
-                videoStartKnopf.classList.remove(
-                    "verborgen"
-                );
+                if (videoStartKnopf) {
+                    videoStartKnopf.classList.remove("verborgen");
+                }
             }
 
         } else {
 
-            videoStartKnopf.classList.remove(
-                "verborgen"
-            );
+            if (videoStartKnopf) {
+                videoStartKnopf.classList.remove("verborgen");
+            }
         }
 
     }, 1600);
@@ -481,13 +494,15 @@ function videoStartPruefen() {
 
 
 /*
- * Startet das ausgewählte YouTube-Video.
+ * Video starten
  */
 function videoStarten(videoId) {
 
     aktuellesVideoId = videoId;
 
-    videoStartKnopf.classList.add("verborgen");
+    if (videoStartKnopf) {
+        videoStartKnopf.classList.add("verborgen");
+    }
 
     if (
         youtubeApiBereit &&
@@ -496,10 +511,6 @@ function videoStarten(videoId) {
 
         youtubePlayer.loadVideoById(videoId);
 
-        /*
-         * Zweiter Startversuch.
-         * Hilft bei manchen mobilen Browsern.
-         */
         window.setTimeout(() => {
 
             if (
@@ -517,7 +528,17 @@ function videoStarten(videoId) {
 
         wartendesVideo = videoId;
 
-        videoStartPruefen();
+        /*
+         * Wenn die YouTube-API noch nicht bereit ist,
+         * Knopf sicherheitshalber anzeigen.
+         */
+        window.setTimeout(() => {
+
+            if (!youtubeApiBereit && videoStartKnopf) {
+                videoStartKnopf.classList.remove("verborgen");
+            }
+
+        }, 1800);
     }
 }
 
@@ -571,10 +592,6 @@ function tuerchenMitEffektOeffnen(
 
     window.setTimeout(() => {
 
-        /*
-         * Die Öffnungsklasse bleibt bis zum
-         * späteren Schließen aktiv.
-         */
         button.classList.add("geoeffnet");
 
 
@@ -766,57 +783,49 @@ testtag.addEventListener(
 
 
 /*
- * Notfall-Startknopf:
- * Wird nur sichtbar, wenn Autoplay blockiert wurde.
+ * Startknopf
  */
-videoStartKnopf.addEventListener(
-    "click",
-    () => {
+if (videoStartKnopf) {
 
-        videoStartKnopf.classList.add(
-            "verborgen"
-        );
+    videoStartKnopf.addEventListener(
+        "click",
+        () => {
 
-        if (
-            youtubeApiBereit &&
-            youtubePlayer &&
-            typeof youtubePlayer.playVideo === "function"
-        ) {
-
-            const status =
-                typeof youtubePlayer.getPlayerState === "function"
-                    ? youtubePlayer.getPlayerState()
-                    : null;
-
-
+            /*
+             * Der Klick selbst ist eine echte
+             * Benutzeraktion. Das ist für
+             * WhatsApp besonders wichtig.
+             */
             if (
-                aktuellesVideoId &&
-                (
-                    status === YT.PlayerState.UNSTARTED ||
-                    status === YT.PlayerState.CUED ||
-                    status === -1
-                )
+                youtubeApiBereit &&
+                youtubePlayer &&
+                aktuellesVideoId
             ) {
 
                 youtubePlayer.loadVideoById(
                     aktuellesVideoId
                 );
+
+                youtubePlayer.playVideo();
+
+                window.setTimeout(() => {
+
+                    if (
+                        youtubePlayer.getPlayerState() ===
+                        YT.PlayerState.PLAYING
+                    ) {
+                        videoStartKnopf.classList.add("verborgen");
+                    }
+
+                }, 500);
+
+            } else if (aktuellesVideoId) {
+
+                wartendesVideo = aktuellesVideoId;
             }
-
-
-            youtubePlayer.playVideo();
-
-            videoStartPruefen();
-
-        } else if (aktuellesVideoId) {
-
-            wartendesVideo =
-                aktuellesVideoId;
-
-            videoStartPruefen();
         }
-    }
-);
+    );
+}
 
 
 /*
