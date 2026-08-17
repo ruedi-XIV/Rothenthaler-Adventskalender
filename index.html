@@ -19,10 +19,12 @@
             alt="Rothenthaler Adventskalender">
 
         <div id="tuerchen-container"></div>
-<div class="kalender-datum">
-    <div class="datum-text">Heute ist der</div>
-    <div id="aktuelles-datum"></div>
-</div>
+
+        <div class="kalender-datum">
+            <div class="datum-text">Heute ist der</div>
+            <div id="aktuelles-datum"></div>
+        </div>
+
     </div>
 
 
@@ -103,7 +105,9 @@
 
             <div id="video-gruss" class="video-gruss">
 
-                <strong>Rothenthaler Adventskalender</strong>
+                <strong>
+                    Rothenthaler Adventskalender
+                </strong>
 
                 <span id="gruss-tuerchen">
                     Türchen Nr. 1
@@ -115,12 +119,27 @@
 
             </div>
 
+
             <div class="video-bereich verborgen">
 
                 <div
                     id="youtube-player"
                     aria-label="Rothenthaler Adventskalender Video">
                 </div>
+
+
+                <!--
+                    Dieser Knopf erscheint nur,
+                    wenn WhatsApp oder ein anderer
+                    Browser den automatischen
+                    Videostart verhindert.
+                -->
+                <button
+                    id="video-starten"
+                    type="button"
+                    class="verborgen">
+                    ▶ Video starten
+                </button>
 
             </div>
 
@@ -131,6 +150,7 @@
 
     <!-- YouTube-API und Kalenderdateien -->
     <script src="https://www.youtube.com/iframe_api"></script>
+
     <script src="positionen.js"></script>
     <script src="tuerchen.js"></script>
     <script src="script.js"></script>
