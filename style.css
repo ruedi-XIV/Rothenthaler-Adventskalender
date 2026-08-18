@@ -1569,3 +1569,30 @@ body{
         font-size: 16px;
     }
 }
+/* PLAY-BUTTON wirklich exakt mittig im Player */
+
+.video-bereich {
+    position: relative !important;
+}
+
+#video-starten {
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    margin: 0 !important;
+
+    transform: translate(-50%, -50%) !important;
+
+    z-index: 999999 !important;
+}
+
+#video-starten:not(.verborgen) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
