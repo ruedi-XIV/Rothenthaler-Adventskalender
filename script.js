@@ -421,15 +421,11 @@ function videoFensterZuruecksetzen() {
 
     grussTimer = null;
 
+    /*
+     * Zuerst das komplette Videofenster
+     * wirklich unsichtbar machen.
+     */
     videoFenster.classList.add(
-        "verborgen"
-    );
-
-    videoGruss.classList.remove(
-        "ausgeblendet"
-    );
-
-    videoBereich.classList.add(
         "verborgen"
     );
 
@@ -440,9 +436,27 @@ function videoFensterZuruecksetzen() {
     aktuellesVideoId = null;
 
     videoAbschlussGestartet = false;
+
+
+    /*
+     * Erst wenn das Videofenster verschwunden ist,
+     * wird es für das nächste Türchen vorbereitet.
+     *
+     * Dadurch blitzt der erste Begrüßungsgruß
+     * nach dem Video nicht mehr auf.
+     */
+    window.setTimeout(() => {
+
+        videoGruss.classList.remove(
+            "ausgeblendet"
+        );
+
+        videoBereich.classList.add(
+            "verborgen"
+        );
+
+    }, 500);
 }
-
-
 /* =========================================================
    ABSCHIEDSSCHNEE
    ========================================================= */
