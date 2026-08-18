@@ -52,7 +52,7 @@ function onYouTubeIframeAPIReady() {
         height: "100%",
 
         playerVars: {
-            autoplay: 1,
+            autoplay: 0,
             rel: 0,
             cc_load_policy: 0,
             playsinline: 1,
@@ -70,33 +70,15 @@ function onYouTubeIframeAPIReady() {
                     const videoId = wartendesVideo;
                     wartendesVideo = null;
 
-                    youtubePlayer.loadVideoById(videoId);
+                    youtubePlayer.cueVideoById(videoId);
                 }
             },
-
 
             onStateChange: (ereignis) => {
 
                 if (ereignis.data === YT.PlayerState.ENDED) {
                     videoBeendet();
                 }
-            },
-
-
-            /*
-             * Wenn WhatsApp Autoplay verhindert:
-             * Nichts weiter erzwingen.
-             *
-             * Der normale YouTube-Player bleibt sichtbar.
-             * Der Benutzer kann direkt den originalen
-             * YouTube-Playknopf antippenpen.
-             */
-            onAutoplayBlocked: () => {
-
-                console.log(
-                    "Autoplay wurde blockiert. " +
-                    "Bitte den YouTube-Playknopf verwenden."
-                );
             }
         }
     });
@@ -227,7 +209,6 @@ function abschiedsschneeErzeugen() {
     abschiedsschnee.innerHTML = "";
 
     const schichten = [
-
         {
             klasse: "hinten",
             anzahl: 20,
@@ -239,7 +220,6 @@ function abschiedsschneeErzeugen() {
             maxDeckkraft: 0.42,
             maxDrift: 18
         },
-
         {
             klasse: "mitte",
             anzahl: 14,
@@ -251,7 +231,6 @@ function abschiedsschneeErzeugen() {
             maxDeckkraft: 0.68,
             maxDrift: 30
         },
-
         {
             klasse: "vorne",
             anzahl: 6,
@@ -265,14 +244,9 @@ function abschiedsschneeErzeugen() {
         }
     ];
 
-
     schichten.forEach((schicht) => {
 
-        for (
-            let index = 0;
-            index < schicht.anzahl;
-            index++
-        ) {
+        for (let index = 0; index < schicht.anzahl; index++) {
 
             const flocke =
                 document.createElement("span");
@@ -363,12 +337,10 @@ function abschiedsgrussZeigen(nummer) {
             abschiedszeile3.textContent = "";
         }
 
-
         abschiedsschneeErzeugen();
 
         abschiedsgruss.classList.remove("verborgen");
         abschiedsgruss.classList.add("sichtbar");
-
 
         window.setTimeout(() => {
 
@@ -376,7 +348,6 @@ function abschiedsgrussZeigen(nummer) {
             abschiedsgruss.classList.add("ausblendend");
 
         }, 6000);
-
 
         window.setTimeout(() => {
 
@@ -448,23 +419,23 @@ async function videoManuellSchliessen() {
 
 
 /* =========================================================
-   VIDEO STARTEN
+   VIDEO VORBEREITEN
    ========================================================= */
 
 function videoStarten(videoId) {
 
     if (
         youtubeApiBereit &&
-        youtubePlayer
+        youtubePlayer &&
+        typeof youtubePlayer.cueVideoById === "function"
     ) {
 
         /*
-         * Normaler Startversuch.
-         *
-         * Wenn WhatsApp ihn blockiert,
-         * bleibt der YouTube-Player sichtbar.
+         * Video wird nur vorbereitet.
+         * Der Benutzer startet es direkt
+         * über den originalen YouTube-Playknopf.
          */
-        youtubePlayer.loadVideoById(videoId);
+        youtubePlayer.cueVideoById(videoId);
 
     } else {
 
@@ -492,10 +463,8 @@ function videoOeffnen(nummer, videoId) {
 
     document.body.style.overflow = "hidden";
 
-
     /*
-     * Begrüßung bleibt wie bisher
-     * 4,2 Sekunden sichtbar.
+     * Begrüßung bleibt 4,2 Sekunden sichtbar.
      */
     grussTimer = window.setTimeout(() => {
 
@@ -532,11 +501,9 @@ function tuerchenMitEffektOeffnen(
 
     button.classList.add("wird-geoeffnet");
 
-
     window.setTimeout(() => {
 
         button.classList.add("geoeffnet");
-
 
         window.setTimeout(() => {
 
@@ -609,7 +576,6 @@ function tuerchenErzeugen() {
             return;
         }
 
-
         const button =
             document.createElement("button");
 
@@ -631,7 +597,6 @@ function tuerchenErzeugen() {
         button.style.top =
             `${position.top}%`;
 
-
         const innen =
             document.createElement("span");
 
@@ -642,13 +607,11 @@ function tuerchenErzeugen() {
             "true"
         );
 
-
         const klappe =
             document.createElement("span");
 
         klappe.className =
             "tuer-klappe";
-
 
         const zahl =
             document.createElement("span");
@@ -659,13 +622,10 @@ function tuerchenErzeugen() {
         zahl.textContent =
             tuer.nummer;
 
-
         klappe.appendChild(zahl);
 
         button.appendChild(innen);
-
         button.appendChild(klappe);
-
 
         button.addEventListener(
             "click",
@@ -684,7 +644,6 @@ function tuerchenErzeugen() {
                     return;
                 }
 
-
                 if (!tuer.video) {
 
                     alert(
@@ -694,7 +653,6 @@ function tuerchenErzeugen() {
                     return;
                 }
 
-
                 tuerchenMitEffektOeffnen(
                     button,
                     tuer.nummer,
@@ -703,10 +661,8 @@ function tuerchenErzeugen() {
             }
         );
 
-
         container.appendChild(button);
     });
-
 
     tuerchenAktualisieren();
 }
@@ -727,7 +683,6 @@ testmodus.addEventListener(
     }
 );
 
-
 testtag.addEventListener(
     "change",
     tuerchenAktualisieren
@@ -742,7 +697,6 @@ videoSchliessen.addEventListener(
     "click",
     videoManuellSchliessen
 );
-
 
 videoFenster.addEventListener(
     "click",
