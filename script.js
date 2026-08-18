@@ -1,52 +1,1274 @@
-Eingefügter Text(3).txt
-Dokument
+function kalenderDatumAktualisieren() {
+    const aktuellesDatum =
+        document.getElementById("aktuelles-datum");
 
-Eingefügter Text(4).txt
-Dokument
-füge du alles richtig ein
+    if (!aktuellesDatum) {
+        return;
+    }
 
-Eingefügter Text(5).txt
-Dokument
+    aktuellesDatum.textContent =
+        new Date().toLocaleDateString("de-DE", {
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        });
+}
 
-markdown(1).md eingefügt
-Datei
+const container = document.getElementById("tuerchen-container");
 
-Eingefügter Text(6).txt
-Dokument
+const videoFenster = document.getElementById("video-fenster");
+const videoSchliessen = document.getElementById("video-schliessen");
+const videoGruss = document.getElementById("video-gruss");
+const grussTuerchen = document.getElementById("gruss-tuerchen");
+const videoBereich = document.querySelector(".video-bereich");
 
-Eingefügter Text(7).txt
-Dokument
+let videoFallback = null;
 
-Eingefügter Text(8).txt
-Dokument
+const testmodus = document.getElementById("testmodus");
+const testtag = document.getElementById("testtag");
+const abschiedsgruss = document.getElementById("abschiedsgruss");
+const abschiedszeile1 = document.getElementById("abschiedszeile-1");
+const abschiedszeile2 = document.getElementById("abschiedszeile-2");
+const abschiedszeile3 = document.getElementById("abschiedszeile-3");
+const abschiedsschnee = document.getElementById("abschiedsschnee");
 
-Ja, das lässt sich sauber beheben. In deinem Code hängt Türchen schließen → Abschiedsgruß ausschließlich daran, dass YouTube zuverlässig den Status ENDED meldet. Genau dieser Status ist laut YouTube eigentlich 0, aber im WhatsApp-WebView kommt das Ereignis offenbar nicht immer sauber bei deinem JavaScript an.
+let youtubePlayer = null;
+let youtubeApiBereit = false;
+let aktivesTuerchen = null;
+let aktiveTuerNummer = null;
+let wartendesVideo = null;
+let grussTimer = null;
 
-Die robuste Lösung ist deshalb: Wir lassen onStateChange bestehen und bauen zusätzlich eine kleine Endkontrolle ein, die regelmäßig getCurrentTime() und getDuration() prüft. YouTube stellt beide Funktionen offiziell bereit. Sobald das Video praktisch am Ende angekommen ist, rufen wir einmalig videoBeendet() auf. Dann funktionieren wieder Türchen schließen → letzter Gruß → Schnee.
+let videoFallbackTimer = null;
+let aktuellesVideoId = null;
 
-Dabei müssen wir unbedingt verhindern, dass videoBeendet() zweimal ausgelöst wird, falls YouTube ENDED doch noch meldet.
+let videoEndePruefTimer = null;
+let letzteVideoZeit = 0;
+let videoAbschlussLaeuft = false;
 
-Schick mir bitte deine aktuelle script.js noch einmal – also die Version mit dem „▶ Video auf YouTube öffnen“-Fallback. Dann setze ich dir die Endkontrolle komplett und sauber ein und gebe dir wieder den vollständigen Text zum Ersetzen.
 
-Eingefügter Text(9).txt
-Dokument
+/* =========================================================
+   YOUTUBE PLAYER
+   ========================================================= */
 
-Ich habe deine aktuelle script.js jetzt mit einer robusten Endkontrolle ergänzt. Deine bisherige Version schließt das Türchen nur, wenn YouTube zuverlässig YT.PlayerState.ENDED meldet. Genau das scheint im WhatsApp-Browser manchmal auszufallen.
+function onYouTubeIframeAPIReady() {
 
-Die neue Version erkennt zusätzlich, wenn das Video fast am Ende war und anschließend auf 0:00 zurückspringt. Dann wird trotzdem einmalig videoBeendet() ausgelöst, sodass wieder Video ausblenden → Türchen schließen → Abschiedsgruß läuft. Deine bestehende Abschlussroutine bleibt dabei unverändert.
+    youtubePlayer = new YT.Player("youtube-player", {
 
-Hier ist die fertige Datei:
+        host: "https://www.youtube-nocookie.com",
 
-Wenn du wieder lieber den kompletten Text direkt hier im Chat möchtest, schicke ich ihn dir auch vollständig zum Kopieren.
+        width: "100%",
+        height: "100%",
 
-ja, bitte
+        playerVars: {
+            autoplay: 0,
+            rel: 0,
+            cc_load_policy: 0,
+            playsinline: 1,
+            controls: 1
+        },
 
-Ja. Hier ist der komplette fertige Text für deine script.js mit der zusätzlichen Endkontrolle.
+        events: {
 
-Die neue Sicherung erkennt jetzt zusätzlich den Fall, dass das Video am Ende auf 0:00 zurückspringt, ohne dass YouTube sauber ENDED meldet. Deine bisherige Abschlussroutine mit Türchen schließen und Abschiedsgruß bleibt dabei erhalten.
+            onReady: () => {
 
-In VS Code wieder: script.js öffnen → Strg+A → alles löschen → kompletten Text einfügen → Strg+S → Commit → Push origin.
+                youtubeApiBereit = true;
 
+                if (wartendesVideo) {
+
+                    const videoId = wartendesVideo;
+
+                    wartendesVideo = null;
+
+                    youtubePlayer.cueVideoById(videoId);
+                }
+            },
+
+
+            onStateChange: (ereignis) => {
+
+                /*
+                 * Sobald das Video wirklich läuft,
+                 * brauchen wir die Notlösung nicht mehr.
+                 * Gleichzeitig startet die zusätzliche
+                 * Endkontrolle für WhatsApp/WebViews.
+                 */
+                if (ereignis.data === YT.PlayerState.PLAYING) {
+
+                    window.clearTimeout(videoFallbackTimer);
+
+                    videoFallbackTimer = null;
+
+                    if (videoFallback) {
+                        videoFallback.style.display = "none";
+                    }
+
+                    videoAbschlussLaeuft = false;
+
+                    videoEndePruefungStarten();
+                }
+
+
+                if (ereignis.data === YT.PlayerState.ENDED) {
+
+                    videoBeendetSicher();
+                }
+            }
+        }
+    });
+}
+
+
+/* =========================================================
+   KALENDERTAG
+   ========================================================= */
+
+function aktuellerKalendertag() {
+
+    if (testmodus.checked) {
+        return Number(testtag.value);
+    }
+
+    const heute = new Date();
+
+    const monat = heute.getMonth() + 1;
+    const tag = heute.getDate();
+
+    if (monat < 12) {
+        return 0;
+    }
+
+    if (monat === 12) {
+        return Math.min(tag, 24);
+    }
+
+    return 24;
+}
+
+
+function tuerIstFreigeschaltet(nummer) {
+
+    return aktuellerKalendertag() >= nummer;
+}
+
+
+function findePosition(positionNummer) {
+
+    return positionen.find(
+        (position) => position.position === positionNummer
+    );
+}
+
+
+/* =========================================================
+   YOUTUBE-NOTLÖSUNG ERZEUGEN
+   ========================================================= */
+
+function videoFallbackErzeugen() {
+
+    if (videoFallback) {
+        return;
+    }
+
+    videoFallback =
+        document.createElement("button");
+
+    videoFallback.id =
+        "video-fallback";
+
+    videoFallback.type =
+        "button";
+
+    videoFallback.textContent =
+        "▶ Video auf YouTube öffnen";
+
+
+    videoFallback.style.display =
+        "none";
+
+    videoFallback.style.margin =
+        "14px auto 0";
+
+    videoFallback.style.padding =
+        "12px 18px";
+
+    videoFallback.style.border =
+        "2px solid #d9ad4d";
+
+    videoFallback.style.borderRadius =
+        "12px";
+
+    videoFallback.style.background =
+        "#0d2443";
+
+    videoFallback.style.color =
+        "#fff3c4";
+
+    videoFallback.style.fontSize =
+        "16px";
+
+    videoFallback.style.fontWeight =
+        "700";
+
+    videoFallback.style.cursor =
+        "pointer";
+
+    videoFallback.style.touchAction =
+        "manipulation";
+
+
+    videoFallback.addEventListener(
+        "click",
+        () => {
+
+            if (!aktuellesVideoId) {
+                return;
+            }
+
+            const youtubeUrl =
+                `https://www.youtube.com/watch?v=${encodeURIComponent(aktuellesVideoId)}`;
+
+            window.location.href =
+                youtubeUrl;
+        }
+    );
+
+
+    const videoBox =
+        document.querySelector(".video-box");
+
+    if (videoBox) {
+
+        videoBox.appendChild(
+            videoFallback
+        );
+    }
+}
+
+
+/* =========================================================
+   VIDEOENDE ROBUST ERKENNEN
+   ========================================================= */
+
+function videoEndePruefungStoppen() {
+
+    if (videoEndePruefTimer) {
+
+        window.clearInterval(
+            videoEndePruefTimer
+        );
+
+        videoEndePruefTimer = null;
+    }
+
+    letzteVideoZeit = 0;
+}
+
+
+function videoBeendetSicher() {
+
+    /*
+     * Verhindert, dass der Abschluss zweimal
+     * gestartet wird.
+     */
+    if (videoAbschlussLaeuft) {
+        return;
+    }
+
+    videoAbschlussLaeuft = true;
+
+    videoEndePruefungStoppen();
+
+    videoBeendet();
+}
+
+
+function videoEndePruefungStarten() {
+
+    videoEndePruefungStoppen();
+
+
+    /*
+     * Alle 0,5 Sekunden prüfen wir,
+     * wo sich das Video befindet.
+     */
+    videoEndePruefTimer =
+        window.setInterval(
+            () => {
+
+                if (
+                    !youtubeApiBereit ||
+                    !youtubePlayer ||
+                    typeof youtubePlayer.getCurrentTime !==
+                        "function" ||
+                    typeof youtubePlayer.getDuration !==
+                        "function"
+                ) {
+                    return;
+                }
+
+
+                try {
+
+                    const aktuelleZeit =
+                        Number(
+                            youtubePlayer.getCurrentTime()
+                        ) || 0;
+
+
+                    const dauer =
+                        Number(
+                            youtubePlayer.getDuration()
+                        ) || 0;
+
+
+                    const status =
+                        typeof youtubePlayer.getPlayerState ===
+                            "function"
+                            ? youtubePlayer.getPlayerState()
+                            : null;
+
+
+                    /*
+                     * NORMALER FALL:
+                     *
+                     * Das Video ist praktisch
+                     * am Ende angekommen.
+                     *
+                     * Wir warten nicht zwingend
+                     * auf das ENDED-Ereignis.
+                     */
+                    if (
+                        dauer > 1 &&
+                        aktuelleZeit >=
+                            Math.max(
+                                dauer - 0.8,
+                                dauer * 0.985
+                            )
+                    ) {
+
+                        videoBeendetSicher();
+
+                        return;
+                    }
+
+
+                    /*
+                     * WHATSAPP-/WEBVIEW-SONDERFALL:
+                     *
+                     * Das Video war bereits fast am Ende
+                     * und springt anschließend plötzlich
+                     * auf 0:00 zurück.
+                     *
+                     * Genau das ist bei dir passiert.
+                     */
+                    if (
+                        dauer > 1 &&
+                        letzteVideoZeit >=
+                            dauer * 0.85 &&
+                        aktuelleZeit < 1.5 &&
+                        status !==
+                            YT.PlayerState.PLAYING
+                    ) {
+
+                        videoBeendetSicher();
+
+                        return;
+                    }
+
+
+                    letzteVideoZeit =
+                        aktuelleZeit;
+
+                } catch (fehler) {
+
+                    /*
+                     * Falls der WhatsApp-Browser
+                     * eine Abfrage kurzzeitig nicht
+                     * zulässt, probieren wir es beim
+                     * nächsten Durchlauf erneut.
+                     */
+                }
+
+            },
+            500
+        );
+}
+
+
+/* =========================================================
+   PLAYER STOPPEN
+   ========================================================= */
+
+function playerStoppen() {
+
+    wartendesVideo = null;
+
+
+    window.clearTimeout(
+        videoFallbackTimer
+    );
+
+    videoFallbackTimer = null;
+
+
+    /*
+     * Auch die zusätzliche Endkontrolle stoppen.
+     */
+    videoEndePruefungStoppen();
+
+
+    if (videoFallback) {
+
+        videoFallback.style.display =
+            "none";
+    }
+
+
+    if (
+        youtubeApiBereit &&
+        youtubePlayer &&
+        typeof youtubePlayer.stopVideo ===
+            "function"
+    ) {
+
+        youtubePlayer.stopVideo();
+    }
+}
+
+
+/* =========================================================
+   TÜRCHEN SCHLIESSEN
+   ========================================================= */
+
+function tuerchenSchliessen() {
+
+    return new Promise(
+        (resolve) => {
+
+            if (!aktivesTuerchen) {
+
+                resolve();
+
+                return;
+            }
+
+
+            const tuer =
+                aktivesTuerchen;
+
+
+            tuer.classList.remove(
+                "wird-geoeffnet"
+            );
+
+            tuer.classList.remove(
+                "geoeffnet"
+            );
+
+
+            void tuer.offsetWidth;
+
+
+            tuer.classList.add(
+                "wird-geschlossen"
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    tuer.classList.remove(
+                        "wird-geschlossen"
+                    );
+
+                    aktivesTuerchen =
+                        null;
+
+                    resolve();
+
+                },
+                2600
+            );
+        }
+    );
+}
+
+
+/* =========================================================
+   VIDEOFENSTER ZURÜCKSETZEN
+   ========================================================= */
+
+function videoFensterZuruecksetzen() {
+
+    window.clearTimeout(
+        grussTimer
+    );
+
+    grussTimer = null;
+
+
+    videoFenster.classList.add(
+        "verborgen"
+    );
+
+
+    videoGruss.classList.remove(
+        "ausgeblendet"
+    );
+
+
+    videoBereich.classList.add(
+        "verborgen"
+    );
+
+
+    document.body.style.overflow =
+        "";
+
+
+    playerStoppen();
+
+
+    aktuellesVideoId =
+        null;
+
+
+    videoAbschlussLaeuft =
+        false;
+}
+
+
+/* =========================================================
+   ABSCHIEDSSCHNEE
+   ========================================================= */
+
+function abschiedsschneeErzeugen() {
+
+    abschiedsschnee.innerHTML =
+        "";
+
+
+    const schichten = [
+
+        {
+            klasse: "hinten",
+            anzahl: 20,
+            minGroesse: 2,
+            maxGroesse: 4,
+            minDauer: 12,
+            maxDauer: 18,
+            minDeckkraft: 0.22,
+            maxDeckkraft: 0.42,
+            maxDrift: 18
+        },
+
+        {
+            klasse: "mitte",
+            anzahl: 14,
+            minGroesse: 4,
+            maxGroesse: 7,
+            minDauer: 9,
+            maxDauer: 14,
+            minDeckkraft: 0.38,
+            maxDeckkraft: 0.68,
+            maxDrift: 30
+        },
+
+        {
+            klasse: "vorne",
+            anzahl: 6,
+            minGroesse: 7,
+            maxGroesse: 11,
+            minDauer: 7,
+            maxDauer: 10,
+            minDeckkraft: 0.58,
+            maxDeckkraft: 0.92,
+            maxDrift: 46
+        }
+    ];
+
+
+    schichten.forEach(
+        (schicht) => {
+
+            for (
+                let index = 0;
+                index < schicht.anzahl;
+                index++
+            ) {
+
+                const flocke =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                flocke.className =
+                    `abschiedsflocke abschiedsflocke-${schicht.klasse}`;
+
+
+                const groesse =
+                    schicht.minGroesse +
+                    Math.random() *
+                    (
+                        schicht.maxGroesse -
+                        schicht.minGroesse
+                    );
+
+
+                const dauer =
+                    schicht.minDauer +
+                    Math.random() *
+                    (
+                        schicht.maxDauer -
+                        schicht.minDauer
+                    );
+
+
+                const drift =
+                    -schicht.maxDrift +
+                    Math.random() *
+                    schicht.maxDrift *
+                    2;
+
+
+                const deckkraft =
+                    schicht.minDeckkraft +
+                    Math.random() *
+                    (
+                        schicht.maxDeckkraft -
+                        schicht.minDeckkraft
+                    );
+
+
+                flocke.style.left =
+                    `${Math.random() * 100}%`;
+
+
+                flocke.style.width =
+                    `${groesse}px`;
+
+
+                flocke.style.height =
+                    `${groesse}px`;
+
+
+                flocke.style.opacity =
+                    deckkraft;
+
+
+                flocke.style.setProperty(
+                    "--fall-dauer",
+                    `${dauer}s`
+                );
+
+
+                flocke.style.setProperty(
+                    "--fall-verzoegerung",
+                    `${Math.random() * -dauer}s`
+                );
+
+
+                flocke.style.setProperty(
+                    "--seitendrift",
+                    `${drift}px`
+                );
+
+
+                abschiedsschnee.appendChild(
+                    flocke
+                );
+            }
+        }
+    );
+}
+
+
+/* =========================================================
+   ABSCHIEDSGRUSS
+   ========================================================= */
+
+function abschiedsgrussZeigen(nummer) {
+
+    return new Promise(
+        (resolve) => {
+
+            if (nummer === 24) {
+
+                abschiedszeile1.textContent =
+                    "Danke, dass de jeden Tog mit dabei warst.";
+
+                abschiedszeile2.textContent =
+                    "Ich wünsch dir fröhliche Weihnachten!";
+
+                abschiedszeile3.textContent =
+                    "Bis zum nächsten Advent!";
+
+            } else {
+
+                abschiedszeile1.textContent =
+                    "De nächste Geschicht wart schie auf dich...";
+
+                abschiedszeile2.textContent =
+                    "Guck när morschn wiedr rei.";
+
+                abschiedszeile3.textContent =
+                    "";
+            }
+
+
+            abschiedsschneeErzeugen();
+
+
+            abschiedsgruss.classList.remove(
+                "verborgen"
+            );
+
+
+            abschiedsgruss.classList.add(
+                "sichtbar"
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    abschiedsgruss.classList.remove(
+                        "sichtbar"
+                    );
+
+                    abschiedsgruss.classList.add(
+                        "ausblendend"
+                    );
+
+                },
+                6000
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    abschiedsgruss.classList.add(
+                        "verborgen"
+                    );
+
+                    abschiedsgruss.classList.remove(
+                        "ausblendend"
+                    );
+
+
+                    abschiedsschnee.innerHTML =
+                        "";
+
+
+                    resolve();
+
+                },
+                7200
+            );
+        }
+    );
+}
+
+
+/* =========================================================
+   VIDEO BEENDET
+   ========================================================= */
+
+async function videoBeendet() {
+
+    const nummer =
+        aktiveTuerNummer;
+
+
+    await new Promise(
+        (resolve) =>
+            window.setTimeout(
+                resolve,
+                1800
+            )
+    );
+
+
+    videoFenster.classList.add(
+        "video-fenster-ausblendend"
+    );
+
+
+    await new Promise(
+        (resolve) =>
+            window.setTimeout(
+                resolve,
+                900
+            )
+    );
+
+
+    videoFensterZuruecksetzen();
+
+
+    videoFenster.classList.remove(
+        "video-fenster-ausblendend"
+    );
+
+
+    await new Promise(
+        (resolve) =>
+            window.setTimeout(
+                resolve,
+                700
+            )
+    );
+
+
+    await tuerchenSchliessen();
+
+
+    aktiveTuerNummer =
+        null;
+
+
+    await abschiedsgrussZeigen(
+        nummer
+    );
+
+
+    videoAbschlussLaeuft =
+        false;
+}
+
+
+/* =========================================================
+   VIDEO MANUELL SCHLIESSEN
+   ========================================================= */
+
+async function videoManuellSchliessen() {
+
+    videoFensterZuruecksetzen();
+
+
+    await tuerchenSchliessen();
+
+
+    aktiveTuerNummer =
+        null;
+}
+
+
+/* =========================================================
+   VIDEO VORBEREITEN
+   ========================================================= */
+
+function videoStarten(videoId) {
+
+    /*
+     * Für jedes neue Video die
+     * Endkontrolle neu vorbereiten.
+     */
+    videoAbschlussLaeuft =
+        false;
+
+    videoEndePruefungStoppen();
+
+
+    aktuellesVideoId =
+        videoId;
+
+
+    videoFallbackErzeugen();
+
+
+    if (videoFallback) {
+
+        videoFallback.style.display =
+            "none";
+    }
+
+
+    window.clearTimeout(
+        videoFallbackTimer
+    );
+
+
+    if (
+        youtubeApiBereit &&
+        youtubePlayer &&
+        typeof youtubePlayer.cueVideoById ===
+            "function"
+    ) {
+
+        youtubePlayer.cueVideoById(
+            videoId
+        );
+
+    } else {
+
+        wartendesVideo =
+            videoId;
+    }
+
+
+    /*
+     * Sicherheitsnetz:
+     * Wenn nach 3 Sekunden noch kein Video läuft,
+     * erscheint unter dem Player der YouTube-Link.
+     */
+    videoFallbackTimer =
+        window.setTimeout(
+            () => {
+
+                let playerLaeuft =
+                    false;
+
+
+                try {
+
+                    playerLaeuft =
+                        youtubeApiBereit &&
+                        youtubePlayer &&
+                        typeof youtubePlayer.getPlayerState ===
+                            "function" &&
+                        youtubePlayer.getPlayerState() ===
+                            YT.PlayerState.PLAYING;
+
+                } catch (fehler) {
+
+                    playerLaeuft =
+                        false;
+                }
+
+
+                if (
+                    !playerLaeuft &&
+                    videoFallback
+                ) {
+
+                    videoFallback.style.display =
+                        "block";
+                }
+
+            },
+            3000
+        );
+}
+
+
+/* =========================================================
+   VIDEO ÖFFNEN
+   ========================================================= */
+
+function videoOeffnen(
+    nummer,
+    videoId
+) {
+
+    grussTuerchen.textContent =
+        `Türchen Nr. ${nummer}`;
+
+
+    videoGruss.classList.remove(
+        "ausgeblendet"
+    );
+
+
+    videoBereich.classList.add(
+        "verborgen"
+    );
+
+
+    playerStoppen();
+
+
+    videoFenster.classList.remove(
+        "verborgen"
+    );
+
+
+    document.body.style.overflow =
+        "hidden";
+
+
+    grussTimer =
+        window.setTimeout(
+            () => {
+
+                videoGruss.classList.add(
+                    "ausgeblendet"
+                );
+
+
+                videoBereich.classList.remove(
+                    "verborgen"
+                );
+
+
+                videoStarten(
+                    videoId
+                );
+
+            },
+            4200
+        );
+}
+
+
+/* =========================================================
+   TÜRCHEN ÖFFNEN
+   ========================================================= */
+
+function tuerchenMitEffektOeffnen(
+    button,
+    nummer,
+    videoId
+) {
+
+    if (
+        aktivesTuerchen ||
+        button.classList.contains(
+            "wird-geoeffnet"
+        )
+    ) {
+
+        return;
+    }
+
+
+    aktivesTuerchen =
+        button;
+
+
+    aktiveTuerNummer =
+        nummer;
+
+
+    button.classList.add(
+        "wird-geoeffnet"
+    );
+
+
+    window.setTimeout(
+        () => {
+
+            button.classList.add(
+                "geoeffnet"
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    videoOeffnen(
+                        nummer,
+                        videoId
+                    );
+
+                },
+                1500
+            );
+
+        },
+        950
+    );
+}
+
+
+/* =========================================================
+   TÜRCHEN AKTUALISIEREN
+   ========================================================= */
+
+function tuerchenAktualisieren() {
+
+    document
+        .querySelectorAll(".tuer")
+        .forEach(
+            (button) => {
+
+                const nummer =
+                    Number(
+                        button.dataset.nummer
+                    );
+
+
+                const freigeschaltet =
+                    tuerIstFreigeschaltet(
+                        nummer
+                    );
+
+
+                button.classList.toggle(
+                    "freigeschaltet",
+                    freigeschaltet
+                );
+
+
+                button.classList.toggle(
+                    "gesperrt",
+                    !freigeschaltet
+                );
+
+
+                button.setAttribute(
+                    "aria-disabled",
+                    freigeschaltet
+                        ? "false"
+                        : "true"
+                );
+            }
+        );
+}
+
+
+/* =========================================================
+   TÜRCHEN ERZEUGEN
+   ========================================================= */
+
+function tuerchenErzeugen() {
+
+    container.innerHTML =
+        "";
+
+
+    tuerchenDaten.forEach(
+        (tuer) => {
+
+            const position =
+                findePosition(
+                    tuer.position
+                );
+
+
+            if (!position) {
+
+                console.error(
+                    `Position ${tuer.position} wurde nicht gefunden.`
+                );
+
+                return;
+            }
+
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+
+            button.className =
+                "tuer";
+
+
+            button.type =
+                "button";
+
+
+            button.dataset.nummer =
+                tuer.nummer;
+
+
+            button.setAttribute(
+                "aria-label",
+                `Türchen ${tuer.nummer}`
+            );
+
+
+            button.style.left =
+                `${position.left}%`;
+
+
+            button.style.top =
+                `${position.top}%`;
+
+
+            const innen =
+                document.createElement(
+                    "span"
+                );
+
+
+            innen.className =
+                "tuer-innen";
+
+
+            innen.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+
+            const klappe =
+                document.createElement(
+                    "span"
+                );
+
+
+            klappe.className =
+                "tuer-klappe";
+
+
+            const zahl =
+                document.createElement(
+                    "span"
+                );
+
+
+            zahl.className =
+                "tuer-zahl";
+
+
+            zahl.textContent =
+                tuer.nummer;
+
+
+            klappe.appendChild(
+                zahl
+            );
+
+
+            button.appendChild(
+                innen
+            );
+
+
+            button.appendChild(
+                klappe
+            );
+
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        !tuerIstFreigeschaltet(
+                            tuer.nummer
+                        )
+                    ) {
+
+                        alert(
+                            `Dieses Türchen öffnet sich erst am ${tuer.nummer}. Dezember.`
+                        );
+
+                        return;
+                    }
+
+
+                    if (!tuer.video) {
+
+                        alert(
+                            `Für Türchen ${tuer.nummer} ist noch kein Video eingetragen.`
+                        );
+
+                        return;
+                    }
+
+
+                    tuerchenMitEffektOeffnen(
+                        button,
+                        tuer.nummer,
+                        tuer.video
+                    );
                 }
             );
 
@@ -134,9 +1356,8 @@ document.addEventListener(
 
 /* =========================================================
    KALENDER STARTEN
+   ========================================================= */
 
-Danach wieder Strg+S → Commit → Push origin.
+tuerchenErzeugen();
 
-Jetzt sollte der Abschluss auch dann ausgelöst werden, wenn WhatsApp das Video am Ende einfach auf 0:00 zurücksetzt, statt das normale YouTube-Endsignal sauber zu melden.
-
-
+kalenderDatumAktualisieren();
