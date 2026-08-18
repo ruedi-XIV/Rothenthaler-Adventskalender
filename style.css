@@ -1310,3 +1310,262 @@ body{
         transform-origin: right bottom;
     }
 }
+/* =========================================================
+   VIDEO-PLAYER FINALFIX
+   WhatsApp / Smartphone / Hochformat / Querformat
+   ========================================================= */
+
+/* Der Videobereich ist die feste Bezugsfläche
+   für Player und Startknopf. */
+.video-bereich {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    overflow: hidden !important;
+    border-radius: 10px !important;
+    background: #000 !important;
+    isolation: isolate;
+}
+
+/* YouTube liegt auf Ebene 1. */
+#youtube-player {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 1 !important;
+    border: 0 !important;
+}
+
+#youtube-player iframe {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 1 !important;
+    border: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   PLAY-BUTTON
+   Er liegt garantiert ÜBER dem YouTube-Player.
+   --------------------------------------------------------- */
+
+#video-starten {
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    transform: translate(-50%, -50%) !important;
+
+    z-index: 100000 !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 190px;
+    min-height: 58px;
+
+    padding: 14px 24px;
+
+    box-sizing: border-box;
+
+    border: 3px solid #d9ad4d;
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #17365d 0%,
+            #0d2443 60%,
+            #07162c 100%
+        );
+
+    color: #fff3c4;
+
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+
+    line-height: 1.2;
+    text-align: center;
+
+    box-shadow:
+        0 5px 18px rgba(0, 0, 0, 0.8),
+        0 0 18px rgba(217, 173, 77, 0.75);
+
+    cursor: pointer;
+
+    pointer-events: auto !important;
+    touch-action: manipulation;
+
+    -webkit-user-select: none;
+    user-select: none;
+
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Wichtig:
+   Wenn JS "verborgen" setzt, darf der Button
+   wirklich nicht sichtbar sein. */
+#video-starten.verborgen {
+    display: none !important;
+}
+
+
+/* Optische Rückmeldung beim Antippen */
+#video-starten:active {
+    transform:
+        translate(-50%, -50%)
+        scale(0.96) !important;
+}
+
+
+/* Tastatur / PC */
+#video-starten:focus-visible {
+    outline: 3px solid #fff3c4;
+    outline-offset: 3px;
+}
+
+
+/* ---------------------------------------------------------
+   SMARTPHONE HOCHFORMAT
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .video-fenster {
+        padding: 8px !important;
+    }
+
+    .video-box {
+        width: 96vw !important;
+        max-width: 96vw !important;
+
+        padding: 12px !important;
+
+        border-radius: 14px !important;
+    }
+
+    .video-bereich {
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+
+    #video-starten {
+        min-width: 170px;
+        min-height: 56px;
+
+        padding: 13px 20px;
+
+        font-size: 17px;
+    }
+}
+
+
+/* ---------------------------------------------------------
+   SMARTPHONE QUERFORMAT
+   Der Player bleibt vollständig im sichtbaren Bildschirm.
+   --------------------------------------------------------- */
+
+@media (max-height: 560px) and (orientation: landscape) {
+
+    .video-fenster {
+        position: fixed !important;
+
+        inset: 0 !important;
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        padding: 4px !important;
+
+        overflow: hidden !important;
+    }
+
+
+    .video-box {
+        width:
+            min(
+                94vw,
+                calc((92dvh - 16px) * 16 / 9)
+            ) !important;
+
+        max-width: 94vw !important;
+        max-height: 96dvh !important;
+
+        padding: 6px !important;
+
+        border-width: 2px !important;
+        border-radius: 10px !important;
+    }
+
+
+    .video-bereich {
+        position: relative !important;
+
+        width: 100% !important;
+        max-height: 92dvh !important;
+
+        margin: 0 !important;
+
+        aspect-ratio: 16 / 9 !important;
+
+        overflow: hidden !important;
+    }
+
+
+    #video-starten {
+        position: absolute !important;
+
+        left: 50% !important;
+        top: 50% !important;
+
+        transform:
+            translate(-50%, -50%) !important;
+
+        z-index: 100000 !important;
+
+        min-width: 165px;
+        min-height: 50px;
+
+        padding: 10px 18px;
+
+        font-size: 16px;
+
+        pointer-events: auto !important;
+    }
+
+
+    #video-schliessen {
+        top: 6px !important;
+        right: 6px !important;
+
+        width: 42px !important;
+        height: 42px !important;
+
+        z-index: 100001 !important;
+    }
+}
+
+
+/* ---------------------------------------------------------
+   Sehr kleine Displays
+   --------------------------------------------------------- */
+
+@media (max-width: 390px) {
+
+    #video-starten {
+        min-width: 155px;
+        min-height: 52px;
+
+        padding: 11px 16px;
+
+        font-size: 16px;
+    }
+}
