@@ -1596,3 +1596,6 @@ body{
     align-items: center !important;
     justify-content: center !important;
 }
+#video-starten {
+    display: none !important;
+}
