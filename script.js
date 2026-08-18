@@ -42,6 +42,9 @@ let grussTimer = null;
 let videoFallbackTimer = null;
 let aktuellesVideoId = null;
 
+let videoEndeTimer = null;
+let videoAbschlussGestartet = false;
+
 
 /* =========================================================
    YOUTUBE PLAYER
@@ -91,10 +94,20 @@ function onYouTubeIframeAPIReady() {
                     if (videoFallback) {
                         videoFallback.style.display = "none";
                     }
+
+                    /*
+                     * Sobald das Video läuft,
+                     * beginnt zusätzlich unsere
+                     * eigene Endkontrolle.
+                     */
+                    videoEndePruefungStarten();
                 }
 
+                /*
+                 * Normales YouTube-Endsignal.
+                 */
                 if (ereignis.data === YT.PlayerState.ENDED) {
-                    videoBeendet();
+                    videoBeendetSicher();
                 }
             }
         }
@@ -223,6 +236,106 @@ function videoFallbackErzeugen() {
 
 
 /* =========================================================
+   VIDEOENDE ROBUST ERKENNEN
+   ========================================================= */
+
+function videoEndePruefungStoppen() {
+
+    if (videoEndeTimer) {
+
+        window.clearInterval(videoEndeTimer);
+
+        videoEndeTimer = null;
+    }
+}
+
+
+function videoBeendetSicher() {
+
+    /*
+     * Verhindert, dass YouTube-Endsignal
+     * und unsere eigene Prüfung gleichzeitig
+     * den Abschluss zweimal starten.
+     */
+    if (videoAbschlussGestartet) {
+        return;
+    }
+
+    videoAbschlussGestartet = true;
+
+    videoEndePruefungStoppen();
+
+    videoBeendet();
+}
+
+
+function videoEndePruefungStarten() {
+
+    videoEndePruefungStoppen();
+
+    /*
+     * Alle 400 Millisekunden prüfen,
+     * wie weit das Video ist.
+     */
+    videoEndeTimer =
+        window.setInterval(
+            () => {
+
+                if (
+                    !youtubeApiBereit ||
+                    !youtubePlayer ||
+                    typeof youtubePlayer.getCurrentTime !== "function" ||
+                    typeof youtubePlayer.getDuration !== "function"
+                ) {
+                    return;
+                }
+
+                try {
+
+                    const aktuelleZeit =
+                        Number(
+                            youtubePlayer.getCurrentTime()
+                        ) || 0;
+
+                    const dauer =
+                        Number(
+                            youtubePlayer.getDuration()
+                        ) || 0;
+
+                    /*
+                     * Wenn nur noch ungefähr
+                     * 0,7 Sekunden fehlen,
+                     * behandeln wir das Video
+                     * als beendet.
+                     *
+                     * Dadurch sind wir nicht mehr
+                     * auf das ENDED-Signal von
+                     * WhatsApp angewiesen.
+                     */
+                    if (
+                        dauer > 1 &&
+                        aktuelleZeit >= dauer - 0.7
+                    ) {
+
+                        videoBeendetSicher();
+                    }
+
+                } catch (fehler) {
+
+                    /*
+                     * Falls der WhatsApp-Browser
+                     * eine Abfrage kurz nicht zulässt,
+                     * wird 400 ms später erneut geprüft.
+                     */
+                }
+
+            },
+            400
+        );
+}
+
+
+/* =========================================================
    PLAYER STOPPEN
    ========================================================= */
 
@@ -233,6 +346,8 @@ function playerStoppen() {
     window.clearTimeout(videoFallbackTimer);
 
     videoFallbackTimer = null;
+
+    videoEndePruefungStoppen();
 
     if (videoFallback) {
         videoFallback.style.display = "none";
@@ -294,6 +409,8 @@ function tuerchenSchliessen() {
         }, 2600);
     });
 }
+
+
 /* =========================================================
    VIDEOFENSTER ZURÜCKSETZEN
    ========================================================= */
@@ -321,6 +438,8 @@ function videoFensterZuruecksetzen() {
     playerStoppen();
 
     aktuellesVideoId = null;
+
+    videoAbschlussGestartet = false;
 }
 
 
@@ -592,11 +711,21 @@ async function videoManuellSchliessen() {
     aktiveTuerNummer =
         null;
 }
+
+
 /* =========================================================
    VIDEO VORBEREITEN
    ========================================================= */
 
 function videoStarten(videoId) {
+
+    /*
+     * Neuer Videodurchlauf:
+     * Abschluss wieder freigeben.
+     */
+    videoAbschlussGestartet = false;
+
+    videoEndePruefungStoppen();
 
     aktuellesVideoId =
         videoId;
@@ -628,6 +757,11 @@ function videoStarten(videoId) {
             videoId;
     }
 
+    /*
+     * Wenn das Video nach 3 Sekunden
+     * noch nicht läuft, erscheint die
+     * Ausweichmöglichkeit.
+     */
     videoFallbackTimer =
         window.setTimeout(
             () => {
@@ -770,6 +904,8 @@ function tuerchenMitEffektOeffnen(
         950
     );
 }
+
+
 /* =========================================================
    TÜRCHEN AKTUALISIEREN
    ========================================================= */
