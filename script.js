@@ -42,10 +42,6 @@ let grussTimer = null;
 let videoFallbackTimer = null;
 let aktuellesVideoId = null;
 
-let videoEndePruefTimer = null;
-let letzteVideoZeit = 0;
-let videoAbschlussLaeuft = false;
-
 
 /* =========================================================
    YOUTUBE PLAYER
@@ -84,15 +80,8 @@ function onYouTubeIframeAPIReady() {
                 }
             },
 
-
             onStateChange: (ereignis) => {
 
-                /*
-                 * Sobald das Video wirklich läuft,
-                 * brauchen wir die Notlösung nicht mehr.
-                 * Gleichzeitig startet die zusätzliche
-                 * Endkontrolle für WhatsApp/WebViews.
-                 */
                 if (ereignis.data === YT.PlayerState.PLAYING) {
 
                     window.clearTimeout(videoFallbackTimer);
@@ -102,16 +91,10 @@ function onYouTubeIframeAPIReady() {
                     if (videoFallback) {
                         videoFallback.style.display = "none";
                     }
-
-                    videoAbschlussLaeuft = false;
-
-                    videoEndePruefungStarten();
                 }
 
-
                 if (ereignis.data === YT.PlayerState.ENDED) {
-
-                    videoBeendetSicher();
+                    videoBeendet();
                 }
             }
         }
@@ -147,7 +130,6 @@ function aktuellerKalendertag() {
 
 
 function tuerIstFreigeschaltet(nummer) {
-
     return aktuellerKalendertag() >= nummer;
 }
 
@@ -182,7 +164,6 @@ function videoFallbackErzeugen() {
     videoFallback.textContent =
         "▶ Video auf YouTube öffnen";
 
-
     videoFallback.style.display =
         "none";
 
@@ -216,7 +197,6 @@ function videoFallbackErzeugen() {
     videoFallback.style.touchAction =
         "manipulation";
 
-
     videoFallback.addEventListener(
         "click",
         () => {
@@ -233,166 +213,12 @@ function videoFallbackErzeugen() {
         }
     );
 
-
     const videoBox =
         document.querySelector(".video-box");
 
     if (videoBox) {
-
-        videoBox.appendChild(
-            videoFallback
-        );
+        videoBox.appendChild(videoFallback);
     }
-}
-
-
-/* =========================================================
-   VIDEOENDE ROBUST ERKENNEN
-   ========================================================= */
-
-function videoEndePruefungStoppen() {
-
-    if (videoEndePruefTimer) {
-
-        window.clearInterval(
-            videoEndePruefTimer
-        );
-
-        videoEndePruefTimer = null;
-    }
-
-    letzteVideoZeit = 0;
-}
-
-
-function videoBeendetSicher() {
-
-    /*
-     * Verhindert, dass der Abschluss zweimal
-     * gestartet wird.
-     */
-    if (videoAbschlussLaeuft) {
-        return;
-    }
-
-    videoAbschlussLaeuft = true;
-
-    videoEndePruefungStoppen();
-
-    videoBeendet();
-}
-
-
-function videoEndePruefungStarten() {
-
-    videoEndePruefungStoppen();
-
-
-    /*
-     * Alle 0,5 Sekunden prüfen wir,
-     * wo sich das Video befindet.
-     */
-    videoEndePruefTimer =
-        window.setInterval(
-            () => {
-
-                if (
-                    !youtubeApiBereit ||
-                    !youtubePlayer ||
-                    typeof youtubePlayer.getCurrentTime !==
-                        "function" ||
-                    typeof youtubePlayer.getDuration !==
-                        "function"
-                ) {
-                    return;
-                }
-
-
-                try {
-
-                    const aktuelleZeit =
-                        Number(
-                            youtubePlayer.getCurrentTime()
-                        ) || 0;
-
-
-                    const dauer =
-                        Number(
-                            youtubePlayer.getDuration()
-                        ) || 0;
-
-
-                    const status =
-                        typeof youtubePlayer.getPlayerState ===
-                            "function"
-                            ? youtubePlayer.getPlayerState()
-                            : null;
-
-
-                    /*
-                     * NORMALER FALL:
-                     *
-                     * Das Video ist praktisch
-                     * am Ende angekommen.
-                     *
-                     * Wir warten nicht zwingend
-                     * auf das ENDED-Ereignis.
-                     */
-                    if (
-                        dauer > 1 &&
-                        aktuelleZeit >=
-                            Math.max(
-                                dauer - 0.8,
-                                dauer * 0.985
-                            )
-                    ) {
-
-                        videoBeendetSicher();
-
-                        return;
-                    }
-
-
-                    /*
-                     * WHATSAPP-/WEBVIEW-SONDERFALL:
-                     *
-                     * Das Video war bereits fast am Ende
-                     * und springt anschließend plötzlich
-                     * auf 0:00 zurück.
-                     *
-                     * Genau das ist bei dir passiert.
-                     */
-                    if (
-                        dauer > 1 &&
-                        letzteVideoZeit >=
-                            dauer * 0.85 &&
-                        aktuelleZeit < 1.5 &&
-                        status !==
-                            YT.PlayerState.PLAYING
-                    ) {
-
-                        videoBeendetSicher();
-
-                        return;
-                    }
-
-
-                    letzteVideoZeit =
-                        aktuelleZeit;
-
-                } catch (fehler) {
-
-                    /*
-                     * Falls der WhatsApp-Browser
-                     * eine Abfrage kurzzeitig nicht
-                     * zulässt, probieren wir es beim
-                     * nächsten Durchlauf erneut.
-                     */
-                }
-
-            },
-            500
-        );
 }
 
 
@@ -404,32 +230,18 @@ function playerStoppen() {
 
     wartendesVideo = null;
 
-
-    window.clearTimeout(
-        videoFallbackTimer
-    );
+    window.clearTimeout(videoFallbackTimer);
 
     videoFallbackTimer = null;
 
-
-    /*
-     * Auch die zusätzliche Endkontrolle stoppen.
-     */
-    videoEndePruefungStoppen();
-
-
     if (videoFallback) {
-
-        videoFallback.style.display =
-            "none";
+        videoFallback.style.display = "none";
     }
-
 
     if (
         youtubeApiBereit &&
         youtubePlayer &&
-        typeof youtubePlayer.stopVideo ===
-            "function"
+        typeof youtubePlayer.stopVideo === "function"
     ) {
 
         youtubePlayer.stopVideo();
@@ -443,99 +255,72 @@ function playerStoppen() {
 
 function tuerchenSchliessen() {
 
-    return new Promise(
-        (resolve) => {
+    return new Promise((resolve) => {
 
-            if (!aktivesTuerchen) {
+        if (!aktivesTuerchen) {
 
-                resolve();
+            resolve();
 
-                return;
-            }
+            return;
+        }
 
+        const tuer =
+            aktivesTuerchen;
 
-            const tuer =
-                aktivesTuerchen;
+        tuer.classList.remove(
+            "wird-geoeffnet"
+        );
 
+        tuer.classList.remove(
+            "geoeffnet"
+        );
+
+        void tuer.offsetWidth;
+
+        tuer.classList.add(
+            "wird-geschlossen"
+        );
+
+        window.setTimeout(() => {
 
             tuer.classList.remove(
-                "wird-geoeffnet"
-            );
-
-            tuer.classList.remove(
-                "geoeffnet"
-            );
-
-
-            void tuer.offsetWidth;
-
-
-            tuer.classList.add(
                 "wird-geschlossen"
             );
 
+            aktivesTuerchen = null;
 
-            window.setTimeout(
-                () => {
+            resolve();
 
-                    tuer.classList.remove(
-                        "wird-geschlossen"
-                    );
-
-                    aktivesTuerchen =
-                        null;
-
-                    resolve();
-
-                },
-                2600
-            );
-        }
-    );
+        }, 2600);
+    });
 }
-
-
 /* =========================================================
    VIDEOFENSTER ZURÜCKSETZEN
    ========================================================= */
 
 function videoFensterZuruecksetzen() {
 
-    window.clearTimeout(
-        grussTimer
-    );
+    window.clearTimeout(grussTimer);
 
     grussTimer = null;
-
 
     videoFenster.classList.add(
         "verborgen"
     );
 
-
     videoGruss.classList.remove(
         "ausgeblendet"
     );
-
 
     videoBereich.classList.add(
         "verborgen"
     );
 
-
-    document.body.style.overflow =
-        "";
-
+    document.body.style.overflow = "";
 
     playerStoppen();
 
-
-    aktuellesVideoId =
-        null;
-
-
-    videoAbschlussLaeuft =
-        false;
+    aktuellesVideoId = null;
 }
 
 
@@ -545,9 +330,7 @@ function videoFensterZuruecksetzen() {
 
 function abschiedsschneeErzeugen() {
 
-    abschiedsschnee.innerHTML =
-        "";
-
+    abschiedsschnee.innerHTML = "";
 
     const schichten = [
 
@@ -588,7 +371,6 @@ function abschiedsschneeErzeugen() {
         }
     ];
 
-
     schichten.forEach(
         (schicht) => {
 
@@ -599,14 +381,10 @@ function abschiedsschneeErzeugen() {
             ) {
 
                 const flocke =
-                    document.createElement(
-                        "span"
-                    );
-
+                    document.createElement("span");
 
                 flocke.className =
                     `abschiedsflocke abschiedsflocke-${schicht.klasse}`;
-
 
                 const groesse =
                     schicht.minGroesse +
@@ -616,7 +394,6 @@ function abschiedsschneeErzeugen() {
                         schicht.minGroesse
                     );
 
-
                 const dauer =
                     schicht.minDauer +
                     Math.random() *
@@ -625,13 +402,11 @@ function abschiedsschneeErzeugen() {
                         schicht.minDauer
                     );
 
-
                 const drift =
                     -schicht.maxDrift +
                     Math.random() *
                     schicht.maxDrift *
                     2;
-
 
                 const deckkraft =
                     schicht.minDeckkraft +
@@ -641,40 +416,32 @@ function abschiedsschneeErzeugen() {
                         schicht.minDeckkraft
                     );
 
-
                 flocke.style.left =
                     `${Math.random() * 100}%`;
-
 
                 flocke.style.width =
                     `${groesse}px`;
 
-
                 flocke.style.height =
                     `${groesse}px`;
 
-
                 flocke.style.opacity =
                     deckkraft;
-
 
                 flocke.style.setProperty(
                     "--fall-dauer",
                     `${dauer}s`
                 );
 
-
                 flocke.style.setProperty(
                     "--fall-verzoegerung",
                     `${Math.random() * -dauer}s`
                 );
 
-
                 flocke.style.setProperty(
                     "--seitendrift",
                     `${drift}px`
                 );
-
 
                 abschiedsschnee.appendChild(
                     flocke
@@ -691,85 +458,70 @@ function abschiedsschneeErzeugen() {
 
 function abschiedsgrussZeigen(nummer) {
 
-    return new Promise(
-        (resolve) => {
+    return new Promise((resolve) => {
 
-            if (nummer === 24) {
+        if (nummer === 24) {
 
-                abschiedszeile1.textContent =
-                    "Danke, dass de jeden Tog mit dabei warst.";
+            abschiedszeile1.textContent =
+                "Danke, dass de jeden Tog mit dabei warst.";
 
-                abschiedszeile2.textContent =
-                    "Ich wünsch dir fröhliche Weihnachten!";
+            abschiedszeile2.textContent =
+                "Ich wünsch dir fröhliche Weihnachten!";
 
-                abschiedszeile3.textContent =
-                    "Bis zum nächsten Advent!";
+            abschiedszeile3.textContent =
+                "Bis zum nächsten Advent!";
 
-            } else {
+        } else {
 
-                abschiedszeile1.textContent =
-                    "De nächste Geschicht wart schie auf dich...";
+            abschiedszeile1.textContent =
+                "De nächste Geschicht wart schie auf dich...";
 
-                abschiedszeile2.textContent =
-                    "Guck när morschn wiedr rei.";
+            abschiedszeile2.textContent =
+                "Guck när morschn wiedr rei.";
 
-                abschiedszeile3.textContent =
-                    "";
-            }
+            abschiedszeile3.textContent =
+                "";
+        }
 
+        abschiedsschneeErzeugen();
 
-            abschiedsschneeErzeugen();
+        abschiedsgruss.classList.remove(
+            "verborgen"
+        );
 
+        abschiedsgruss.classList.add(
+            "sichtbar"
+        );
+
+        window.setTimeout(() => {
 
             abschiedsgruss.classList.remove(
-                "verborgen"
-            );
-
-
-            abschiedsgruss.classList.add(
                 "sichtbar"
             );
 
-
-            window.setTimeout(
-                () => {
-
-                    abschiedsgruss.classList.remove(
-                        "sichtbar"
-                    );
-
-                    abschiedsgruss.classList.add(
-                        "ausblendend"
-                    );
-
-                },
-                6000
+            abschiedsgruss.classList.add(
+                "ausblendend"
             );
 
+        }, 6000);
 
-            window.setTimeout(
-                () => {
+        window.setTimeout(() => {
 
-                    abschiedsgruss.classList.add(
-                        "verborgen"
-                    );
-
-                    abschiedsgruss.classList.remove(
-                        "ausblendend"
-                    );
-
-
-                    abschiedsschnee.innerHTML =
-                        "";
-
-
-                    resolve();
-
-                },
-                7200
+            abschiedsgruss.classList.add(
+                "verborgen"
             );
-        }
-    );
+
+            abschiedsgruss.classList.remove(
+                "ausblendend"
+            );
+
+            abschiedsschnee.innerHTML =
+                "";
+
+            resolve();
+
+        }, 7200);
+    });
 }
 
 
@@ -782,7 +534,6 @@ async function videoBeendet() {
     const nummer =
         aktiveTuerNummer;
 
-
     await new Promise(
         (resolve) =>
             window.setTimeout(
@@ -791,11 +542,9 @@ async function videoBeendet() {
             )
     );
 
-
     videoFenster.classList.add(
         "video-fenster-ausblendend"
     );
-
 
     await new Promise(
         (resolve) =>
@@ -805,14 +554,11 @@ async function videoBeendet() {
             )
     );
 
-
     videoFensterZuruecksetzen();
-
 
     videoFenster.classList.remove(
         "video-fenster-ausblendend"
     );
-
 
     await new Promise(
         (resolve) =>
@@ -822,21 +568,14 @@ async function videoBeendet() {
             )
     );
 
-
     await tuerchenSchliessen();
-
 
     aktiveTuerNummer =
         null;
 
-
     await abschiedsgrussZeigen(
         nummer
     );
-
-
-    videoAbschlussLaeuft =
-        false;
 }
 
 
@@ -848,49 +587,29 @@ async function videoManuellSchliessen() {
 
     videoFensterZuruecksetzen();
 
-
     await tuerchenSchliessen();
-
 
     aktiveTuerNummer =
         null;
 }
-
-
 /* =========================================================
    VIDEO VORBEREITEN
    ========================================================= */
 
 function videoStarten(videoId) {
 
-    /*
-     * Für jedes neue Video die
-     * Endkontrolle neu vorbereiten.
-     */
-    videoAbschlussLaeuft =
-        false;
-
-    videoEndePruefungStoppen();
-
-
     aktuellesVideoId =
         videoId;
 
-
     videoFallbackErzeugen();
 
-
     if (videoFallback) {
-
-        videoFallback.style.display =
-            "none";
+        videoFallback.style.display = "none";
     }
-
 
     window.clearTimeout(
         videoFallbackTimer
     );
-
 
     if (
         youtubeApiBereit &&
@@ -909,19 +628,12 @@ function videoStarten(videoId) {
             videoId;
     }
 
-
-    /*
-     * Sicherheitsnetz:
-     * Wenn nach 3 Sekunden noch kein Video läuft,
-     * erscheint unter dem Player der YouTube-Link.
-     */
     videoFallbackTimer =
         window.setTimeout(
             () => {
 
                 let playerLaeuft =
                     false;
-
 
                 try {
 
@@ -938,7 +650,6 @@ function videoStarten(videoId) {
                     playerLaeuft =
                         false;
                 }
-
 
                 if (
                     !playerLaeuft &&
@@ -967,28 +678,22 @@ function videoOeffnen(
     grussTuerchen.textContent =
         `Türchen Nr. ${nummer}`;
 
-
     videoGruss.classList.remove(
         "ausgeblendet"
     );
-
 
     videoBereich.classList.add(
         "verborgen"
     );
 
-
     playerStoppen();
-
 
     videoFenster.classList.remove(
         "verborgen"
     );
 
-
     document.body.style.overflow =
         "hidden";
-
 
     grussTimer =
         window.setTimeout(
@@ -998,11 +703,9 @@ function videoOeffnen(
                     "ausgeblendet"
                 );
 
-
                 videoBereich.classList.remove(
                     "verborgen"
                 );
-
 
                 videoStarten(
                     videoId
@@ -1034,19 +737,15 @@ function tuerchenMitEffektOeffnen(
         return;
     }
 
-
     aktivesTuerchen =
         button;
-
 
     aktiveTuerNummer =
         nummer;
 
-
     button.classList.add(
         "wird-geoeffnet"
     );
-
 
     window.setTimeout(
         () => {
@@ -1054,7 +753,6 @@ function tuerchenMitEffektOeffnen(
             button.classList.add(
                 "geoeffnet"
             );
-
 
             window.setTimeout(
                 () => {
@@ -1072,8 +770,6 @@ function tuerchenMitEffektOeffnen(
         950
     );
 }
-
-
 /* =========================================================
    TÜRCHEN AKTUALISIEREN
    ========================================================= */
@@ -1090,24 +786,20 @@ function tuerchenAktualisieren() {
                         button.dataset.nummer
                     );
 
-
                 const freigeschaltet =
                     tuerIstFreigeschaltet(
                         nummer
                     );
-
 
                 button.classList.toggle(
                     "freigeschaltet",
                     freigeschaltet
                 );
 
-
                 button.classList.toggle(
                     "gesperrt",
                     !freigeschaltet
                 );
-
 
                 button.setAttribute(
                     "aria-disabled",
@@ -1129,7 +821,6 @@ function tuerchenErzeugen() {
     container.innerHTML =
         "";
 
-
     tuerchenDaten.forEach(
         (tuer) => {
 
@@ -1137,7 +828,6 @@ function tuerchenErzeugen() {
                 findePosition(
                     tuer.position
                 );
-
 
             if (!position) {
 
@@ -1148,93 +838,74 @@ function tuerchenErzeugen() {
                 return;
             }
 
-
             const button =
                 document.createElement(
                     "button"
                 );
 
-
             button.className =
                 "tuer";
-
 
             button.type =
                 "button";
 
-
             button.dataset.nummer =
                 tuer.nummer;
-
 
             button.setAttribute(
                 "aria-label",
                 `Türchen ${tuer.nummer}`
             );
 
-
             button.style.left =
                 `${position.left}%`;
 
-
             button.style.top =
                 `${position.top}%`;
-
 
             const innen =
                 document.createElement(
                     "span"
                 );
 
-
             innen.className =
                 "tuer-innen";
-
 
             innen.setAttribute(
                 "aria-hidden",
                 "true"
             );
 
-
             const klappe =
                 document.createElement(
                     "span"
                 );
 
-
             klappe.className =
                 "tuer-klappe";
-
 
             const zahl =
                 document.createElement(
                     "span"
                 );
 
-
             zahl.className =
                 "tuer-zahl";
 
-
             zahl.textContent =
                 tuer.nummer;
-
 
             klappe.appendChild(
                 zahl
             );
 
-
             button.appendChild(
                 innen
             );
 
-
             button.appendChild(
                 klappe
             );
-
 
             button.addEventListener(
                 "click",
@@ -1253,7 +924,6 @@ function tuerchenErzeugen() {
                         return;
                     }
 
-
                     if (!tuer.video) {
 
                         alert(
@@ -1263,7 +933,6 @@ function tuerchenErzeugen() {
                         return;
                     }
 
-
                     tuerchenMitEffektOeffnen(
                         button,
                         tuer.nummer,
@@ -1272,13 +941,11 @@ function tuerchenErzeugen() {
                 }
             );
 
-
             container.appendChild(
                 button
             );
         }
     );
-
 
     tuerchenAktualisieren();
 }
@@ -1294,7 +961,6 @@ testmodus.addEventListener(
 
         testtag.disabled =
             !testmodus.checked;
-
 
         tuerchenAktualisieren();
     }
