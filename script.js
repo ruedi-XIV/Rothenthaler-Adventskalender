@@ -909,67 +909,19 @@ function videoManuellStarten() {
         return;
     }
 
+    /*
+     * Wenn der blaue Knopf erscheint,
+     * hat der eingebettete YouTube-Player
+     * nicht zuverlässig gestartet.
+     *
+     * Dann öffnen wir das Video direkt bei YouTube.
+     */
+    const youtubeAdresse =
+        "https://www.youtube.com/watch?v=" +
+        encodeURIComponent(aktuellesVideoId);
 
-    if (
-        !youtubeApiBereit ||
-        !youtubePlayer
-    ) {
-
-        wartendesVideo =
-            aktuellesVideoId;
-
-        startKnopfZeigen();
-
-        return;
-    }
-
-
-    startKnopfVerbergen();
-
-
-    try {
-
-        const status =
-            typeof youtubePlayer.getPlayerState ===
-                "function"
-                ? youtubePlayer.getPlayerState()
-                : null;
-
-
-        if (
-            status ===
-                YT.PlayerState.UNSTARTED ||
-            status ===
-                YT.PlayerState.CUED ||
-            status === -1 ||
-            status === null
-        ) {
-
-            youtubePlayer.loadVideoById(
-                aktuellesVideoId
-            );
-        }
-
-
-        youtubePlayer.playVideo();
-
-
-    } catch (fehler) {
-
-        console.warn(
-            "Manueller Videostart fehlgeschlagen.",
-            fehler
-        );
-
-        startKnopfZeigen();
-
-        return;
-    }
-
-
-    videoStartPruefen();
+    window.location.href = youtubeAdresse;
 }
-
 
 /* =========================================================
    VIDEOFENSTER ÖFFNEN
