@@ -1,4 +1,5 @@
 function kalenderDatumAktualisieren() {
+
     const aktuellesDatum =
         document.getElementById("aktuelles-datum");
 
@@ -14,6 +15,10 @@ function kalenderDatumAktualisieren() {
         });
 }
 
+
+/* =========================================================
+   ELEMENTE
+   ========================================================= */
 
 const container =
     document.getElementById("tuerchen-container");
@@ -58,6 +63,10 @@ const abschiedsschnee =
     document.getElementById("abschiedsschnee");
 
 
+/* =========================================================
+   VARIABLEN
+   ========================================================= */
+
 let youtubePlayer = null;
 let youtubeApiBereit = false;
 
@@ -70,14 +79,12 @@ let aktuellesVideoId = null;
 let grussTimer = null;
 let startPruefTimer = null;
 
-let videoWirdBeendet = false;
+let videoAbschlussLaeuft = false;
 
 
-/*
- * ---------------------------------------------------------
- * Hilfsfunktionen für den Startknopf
- * ---------------------------------------------------------
- */
+/* =========================================================
+   STARTKNOPF
+   ========================================================= */
 
 function startKnopfVerbergen() {
 
@@ -99,108 +106,25 @@ function startKnopfZeigen() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * YouTube-IFrame-API
- * ---------------------------------------------------------
- *
- * Diese Funktion wird automatisch von YouTube aufgerufen,
- * sobald die IFrame-API vollständig geladen ist.
- */
+/* =========================================================
+   YOUTUBE-IFRAME-API
+
+   Der Player wird wieder genau wie in der früheren
+   funktionierenden Version einmal beim Laden erzeugt.
+   ========================================================= */
 
 function onYouTubeIframeAPIReady() {
 
-    /*
-     * Wichtig für WhatsApp:
-     * Den Player NICHT schon beim Laden der Seite erzeugen.
-     * Zu diesem Zeitpunkt ist das Videofenster noch verborgen.
-     *
-     * Wir merken uns nur, dass die YouTube-API bereit ist.
-     */
-    youtubeApiBereit = true;
-
-    if (wartendesVideo) {
-
-        const videoId = wartendesVideo;
-
-        wartendesVideo = null;
-
-        videoStarten(videoId);
-    }
-}
-function youtubePlayerErzeugen(videoId) {
-
-    /*
-     * Falls von einem vorherigen Versuch noch ein Player
-     * existiert, wird er zuerst vollständig entfernt.
-     */
-    if (youtubePlayer) {
-
-        try {
-
-            if (
-                typeof youtubePlayer.destroy ===
-                "function"
-            ) {
-                youtubePlayer.destroy();
-            }
-
-        } catch (fehler) {
-
-            console.warn(
-                "Alter YouTube-Player konnte nicht entfernt werden.",
-                fehler
-            );
-        }
-
-        youtubePlayer = null;
-    }
-
-
-    /*
-     * Nach destroy() kann das ursprüngliche DIV fehlen.
-     * Deshalb erzeugen wir es sicherheitshalber neu.
-     */
-    let playerElement =
-        document.getElementById(
-            "youtube-player"
-        );
-
-    if (!playerElement) {
-
-        playerElement =
-            document.createElement(
-                "div"
-            );
-
-        playerElement.id =
-            "youtube-player";
-
-        playerElement.setAttribute(
-            "aria-label",
-            "Rothenthaler Adventskalender Video"
-        );
-
-        videoBereich.insertBefore(
-            playerElement,
-            videoStartKnopf
-        );
-    }
-
-
-    /*
-     * Jetzt erst wird der echte YouTube-Player erzeugt.
-     * Das Videofenster ist zu diesem Zeitpunkt bereits sichtbar.
-     */
     youtubePlayer =
         new YT.Player(
             "youtube-player",
             {
 
+                host:
+                    "https://www.youtube-nocookie.com",
+
                 width: "100%",
                 height: "100%",
-
-                videoId: videoId,
 
                 playerVars: {
                     autoplay: 1,
@@ -213,19 +137,40 @@ function youtubePlayerErzeugen(videoId) {
 
                     onReady: () => {
 
-                        try {
+                        youtubeApiBereit = true;
 
-                            youtubePlayer.playVideo();
+                        if (wartendesVideo) {
 
-                        } catch (fehler) {
+                            const videoId =
+                                wartendesVideo;
 
-                            console.warn(
-                                "Autoplay wurde blockiert.",
-                                fehler
+                            wartendesVideo = null;
+
+                            aktuellesVideoId =
+                                videoId;
+
+                            youtubePlayer.loadVideoById(
+                                videoId
                             );
-                        }
 
-                        videoStartPruefen();
+                            window.setTimeout(
+                                () => {
+
+                                    if (
+                                        youtubePlayer &&
+                                        typeof youtubePlayer.playVideo ===
+                                            "function"
+                                    ) {
+
+                                        youtubePlayer.playVideo();
+                                    }
+
+                                },
+                                300
+                            );
+
+                            videoStartPruefen();
+                        }
                     },
 
 
@@ -268,19 +213,24 @@ function youtubePlayerErzeugen(videoId) {
                 }
             }
         );
-}/*
- * ---------------------------------------------------------
- * Kalenderdatum / Freischaltung
- * ---------------------------------------------------------
- */
+}
+
+
+/* =========================================================
+   AKTUELLER KALENDERTAG
+   ========================================================= */
 
 function aktuellerKalendertag() {
 
     if (testmodus.checked) {
-        return Number(testtag.value);
+
+        return Number(
+            testtag.value
+        );
     }
 
-    const heute = new Date();
+    const heute =
+        new Date();
 
     const monat =
         heute.getMonth() + 1;
@@ -288,27 +238,45 @@ function aktuellerKalendertag() {
     const tag =
         heute.getDate();
 
+
     if (monat < 12) {
         return 0;
     }
 
     if (monat === 12) {
-        return Math.min(tag, 24);
+
+        return Math.min(
+            tag,
+            24
+        );
     }
 
     return 24;
 }
 
 
-function tuerIstFreigeschaltet(nummer) {
+/* =========================================================
+   FREISCHALTUNG
+   ========================================================= */
+
+function tuerIstFreigeschaltet(
+    nummer
+) {
 
     return (
-        aktuellerKalendertag() >= nummer
+        aktuellerKalendertag() >=
+        nummer
     );
 }
 
 
-function findePosition(positionNummer) {
+/* =========================================================
+   POSITION FINDEN
+   ========================================================= */
+
+function findePosition(
+    positionNummer
+) {
 
     return positionen.find(
         (position) =>
@@ -318,11 +286,9 @@ function findePosition(positionNummer) {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Player stoppen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   PLAYER STOPPEN
+   ========================================================= */
 
 function playerStoppen() {
 
@@ -336,6 +302,7 @@ function playerStoppen() {
 
     startKnopfVerbergen();
 
+
     if (
         youtubeApiBereit &&
         youtubePlayer &&
@@ -344,10 +311,13 @@ function playerStoppen() {
     ) {
 
         try {
+
             youtubePlayer.stopVideo();
+
         } catch (fehler) {
+
             console.warn(
-                "YouTube-Player konnte nicht gestoppt werden.",
+                "Video konnte nicht gestoppt werden.",
                 fehler
             );
         }
@@ -355,11 +325,9 @@ function playerStoppen() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Tür schließen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   TÜR SCHLIESSEN
+   ========================================================= */
 
 function tuerchenSchliessen() {
 
@@ -375,6 +343,7 @@ function tuerchenSchliessen() {
             const tuer =
                 aktivesTuerchen;
 
+
             tuer.classList.remove(
                 "wird-geoeffnet"
             );
@@ -383,15 +352,17 @@ function tuerchenSchliessen() {
                 "geoeffnet"
             );
 
+
             /*
-             * Browser zwingend den aktuellen
-             * Zustand berechnen lassen.
+             * Browser zwingend neu berechnen lassen.
              */
             void tuer.offsetWidth;
+
 
             tuer.classList.add(
                 "wird-geschlossen"
             );
+
 
             window.setTimeout(
                 () => {
@@ -400,7 +371,8 @@ function tuerchenSchliessen() {
                         "wird-geschlossen"
                     );
 
-                    aktivesTuerchen = null;
+                    aktivesTuerchen =
+                        null;
 
                     resolve();
 
@@ -412,11 +384,12 @@ function tuerchenSchliessen() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Videofenster zurücksetzen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   VIDEOFENSTER ZURÜCKSETZEN
+
+   Wichtig:
+   "hidden" verhindert den WhatsApp-Fehler beim Drehen.
+   ========================================================= */
 
 function videoFensterZuruecksetzen() {
 
@@ -431,11 +404,16 @@ function videoFensterZuruecksetzen() {
     grussTimer = null;
     startPruefTimer = null;
 
+
     videoFenster.classList.add(
         "verborgen"
     );
 
+    /*
+     * Hoch-/Querformat-Fix für WhatsApp.
+     */
     videoFenster.hidden = true;
+
 
     videoGruss.classList.remove(
         "ausgeblendet"
@@ -445,25 +423,27 @@ function videoFensterZuruecksetzen() {
         "verborgen"
     );
 
-    document.body.style.overflow = "";
+    document.body.style.overflow =
+        "";
 
     playerStoppen();
 
-    aktuellesVideoId = null;
+    aktuellesVideoId =
+        null;
 
-    videoWirdBeendet = false;
+    videoAbschlussLaeuft =
+        false;
 }
 
 
-/*
- * ---------------------------------------------------------
- * Schneefall beim Abschiedsgruß
- * ---------------------------------------------------------
- */
+/* =========================================================
+   SCHNEEFALL
+   ========================================================= */
 
 function abschiedsschneeErzeugen() {
 
-    abschiedsschnee.innerHTML = "";
+    abschiedsschnee.innerHTML =
+        "";
 
     const schichten = [
 
@@ -518,6 +498,7 @@ function abschiedsschneeErzeugen() {
                     document.createElement(
                         "span"
                     );
+
 
                 flocke.className =
                     `abschiedsflocke abschiedsflocke-${schicht.klasse}`;
@@ -596,13 +577,13 @@ function abschiedsschneeErzeugen() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Abschiedsgruß
- * ---------------------------------------------------------
- */
+/* =========================================================
+   ABSCHIEDSGRUSS
+   ========================================================= */
 
-function abschiedsgrussZeigen(nummer) {
+function abschiedsgrussZeigen(
+    nummer
+) {
 
     return new Promise(
         (resolve) => {
@@ -632,6 +613,7 @@ function abschiedsgrussZeigen(nummer) {
 
 
             abschiedsschneeErzeugen();
+
 
             abschiedsgruss.classList.remove(
                 "verborgen"
@@ -682,23 +664,19 @@ function abschiedsgrussZeigen(nummer) {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Video wurde vollständig abgespielt
- * ---------------------------------------------------------
- */
+/* =========================================================
+   VIDEO BEENDET
+   ========================================================= */
 
 async function videoBeendet() {
 
-    /*
-     * Verhindert, dass das ENDED-Ereignis
-     * versehentlich zweimal abgearbeitet wird.
-     */
-    if (videoWirdBeendet) {
+    if (videoAbschlussLaeuft) {
         return;
     }
 
-    videoWirdBeendet = true;
+    videoAbschlussLaeuft =
+        true;
+
 
     const nummer =
         aktiveTuerNummer;
@@ -746,7 +724,10 @@ async function videoBeendet() {
 
     await tuerchenSchliessen();
 
-    aktiveTuerNummer = null;
+
+    aktiveTuerNummer =
+        null;
+
 
     await abschiedsgrussZeigen(
         nummer
@@ -754,35 +735,38 @@ async function videoBeendet() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Video manuell schließen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   VIDEO MANUELL SCHLIESSEN
+   ========================================================= */
 
 async function videoManuellSchliessen() {
 
-    if (videoWirdBeendet) {
+    if (videoAbschlussLaeuft) {
         return;
     }
 
-    videoWirdBeendet = true;
+    videoAbschlussLaeuft =
+        true;
+
 
     videoFensterZuruecksetzen();
 
+
     await tuerchenSchliessen();
 
-    aktiveTuerNummer = null;
 
-    videoWirdBeendet = false;
+    aktiveTuerNummer =
+        null;
+
+
+    videoAbschlussLaeuft =
+        false;
 }
 
 
-/*
- * ---------------------------------------------------------
- * Prüfen, ob das Video wirklich läuft
- * ---------------------------------------------------------
- */
+/* =========================================================
+   PRÜFEN, OB VIDEO WIRKLICH LÄUFT
+   ========================================================= */
 
 function videoStartPruefen() {
 
@@ -790,11 +774,7 @@ function videoStartPruefen() {
         startPruefTimer
     );
 
-    /*
-     * Etwas mehr Zeit als vorher.
-     * Gerade WhatsApp und langsame Mobilverbindungen
-     * brauchen gelegentlich länger.
-     */
+
     startPruefTimer =
         window.setTimeout(
             () => {
@@ -807,6 +787,7 @@ function videoStartPruefen() {
                 ) {
 
                     let status = null;
+
 
                     try {
 
@@ -831,11 +812,6 @@ function videoStartPruefen() {
 
                     } else {
 
-                        /*
-                         * Autoplay hat nicht funktioniert.
-                         * Jetzt erhält der Besucher einen
-                         * echten Startknopf.
-                         */
                         startKnopfZeigen();
                     }
 
@@ -850,91 +826,15 @@ function videoStartPruefen() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Automatischen Videostart versuchen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   VIDEO STARTEN
 
-function automatischenVideoStartVersuchen(
+   Wieder die einfache frühere Logik.
+   ========================================================= */
+
+function videoStarten(
     videoId
 ) {
-
-    if (
-        !youtubeApiBereit ||
-        !youtubePlayer
-    ) {
-
-        wartendesVideo = videoId;
-
-        videoStartPruefen();
-
-        return;
-    }
-
-
-    try {
-
-        /*
-         * loadVideoById versucht das Video direkt
-         * zu laden und abzuspielen.
-         */
-        youtubePlayer.loadVideoById(
-            videoId
-        );
-
-    } catch (fehler) {
-
-        console.warn(
-            "Automatischer Videostart fehlgeschlagen.",
-            fehler
-        );
-
-        startKnopfZeigen();
-
-        return;
-    }
-
-
-    /*
-     * Kein hektischer zweiter loadVideoById-Aufruf.
-     * Wir geben YouTube erst einmal Zeit.
-     */
-    window.setTimeout(
-        () => {
-
-            if (
-                youtubePlayer &&
-                typeof youtubePlayer.playVideo ===
-                    "function"
-            ) {
-
-                try {
-                    youtubePlayer.playVideo();
-                } catch (fehler) {
-                    console.warn(
-                        "playVideo wurde vom Browser blockiert.",
-                        fehler
-                    );
-                }
-            }
-
-        },
-        650
-    );
-
-
-    videoStartPruefen();
-}
-
-
-/*
- * ---------------------------------------------------------
- * Video starten
- * ---------------------------------------------------------
- */
-
-function videoStarten(videoId) {
 
     aktuellesVideoId =
         videoId;
@@ -942,48 +842,66 @@ function videoStarten(videoId) {
     startKnopfVerbergen();
 
 
-    /*
-     * Falls die YouTube-API noch nicht geladen ist,
-     * merken wir uns das Video.
-     */
     if (
-        !youtubeApiBereit ||
-        typeof YT === "undefined" ||
-        typeof YT.Player === "undefined"
+        youtubeApiBereit &&
+        youtubePlayer
     ) {
 
+        try {
+
+            youtubePlayer.loadVideoById(
+                videoId
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    if (
+                        youtubePlayer &&
+                        typeof youtubePlayer.playVideo ===
+                            "function"
+                    ) {
+
+                        youtubePlayer.playVideo();
+                    }
+
+                },
+                300
+            );
+
+        } catch (fehler) {
+
+            console.warn(
+                "Automatischer Videostart fehlgeschlagen.",
+                fehler
+            );
+
+            startKnopfZeigen();
+        }
+
+
+        videoStartPruefen();
+
+    } else {
+
+        /*
+         * API ist noch nicht fertig.
+         */
         wartendesVideo =
             videoId;
 
-        /*
-         * Nach kurzer Zeit Startknopf anbieten.
-         */
         videoStartPruefen();
-
-        return;
     }
-
-
-    /*
-     * Der entscheidende WhatsApp-Fix:
-     * Player wird JETZT erzeugt,
-     * also erst nachdem der Videobereich sichtbar ist.
-     */
-    youtubePlayerErzeugen(
-        videoId
-    );
 }
 
-/*
- * ---------------------------------------------------------
- * MANUELLER VIDEOSTART
- *
- * Dieser Weg wird ausschließlich durch einen echten
- * Fingertipp/Mausklick ausgelöst.
- * Das ist besonders für WhatsApp, Android und iPhone
- * wichtig, weil Browser Autoplay blockieren dürfen.
- * ---------------------------------------------------------
- */
+
+/* =========================================================
+   MANUELLER STARTKNOPF
+
+   Keine Neuerzeugung des Players.
+   Nur vorhandenen Player starten.
+   ========================================================= */
 
 function videoManuellStarten() {
 
@@ -992,13 +910,9 @@ function videoManuellStarten() {
     }
 
 
-    startKnopfVerbergen();
-
-
     if (
         !youtubeApiBereit ||
-        typeof YT === "undefined" ||
-        typeof YT.Player === "undefined"
+        !youtubePlayer
     ) {
 
         wartendesVideo =
@@ -1010,78 +924,129 @@ function videoManuellStarten() {
     }
 
 
-    /*
-     * Zuerst versuchen wir den vorhandenen Player
-     * direkt durch den Fingertipp zu starten.
-     */
-    if (
-        youtubePlayer &&
-        typeof youtubePlayer.playVideo ===
-            "function"
-    ) {
+    startKnopfVerbergen();
 
-        try {
 
-            youtubePlayer.playVideo();
+    try {
 
-        } catch (fehler) {
+        const status =
+            typeof youtubePlayer.getPlayerState ===
+                "function"
+                ? youtubePlayer.getPlayerState()
+                : null;
 
-            console.warn(
-                "Direkter Start fehlgeschlagen.",
-                fehler
+
+        if (
+            status ===
+                YT.PlayerState.UNSTARTED ||
+            status ===
+                YT.PlayerState.CUED ||
+            status === -1 ||
+            status === null
+        ) {
+
+            youtubePlayer.loadVideoById(
+                aktuellesVideoId
             );
         }
 
 
-        window.setTimeout(
-            () => {
-
-                let status = null;
-
-                try {
-
-                    status =
-                        youtubePlayer.getPlayerState();
-
-                } catch (fehler) {
-                    status = null;
-                }
+        youtubePlayer.playVideo();
 
 
-                /*
-                 * Läuft er trotz Fingertipp nicht,
-                 * erzeugen wir einen komplett neuen Player.
-                 */
-                if (
-                    status !==
-                    YT.PlayerState.PLAYING
-                ) {
+    } catch (fehler) {
 
-                    youtubePlayerErzeugen(
-                        aktuellesVideoId
-                    );
-                }
-
-            },
-            700
+        console.warn(
+            "Manueller Videostart fehlgeschlagen.",
+            fehler
         );
 
-    } else {
+        startKnopfZeigen();
 
-        youtubePlayerErzeugen(
-            aktuellesVideoId
-        );
+        return;
     }
 
 
     videoStartPruefen();
 }
 
-/*
- * ---------------------------------------------------------
- * Tür öffnen
- * ---------------------------------------------------------
- */
+
+/* =========================================================
+   VIDEOFENSTER ÖFFNEN
+
+   Hier wird "hidden" wieder aufgehoben.
+   ========================================================= */
+
+function videoOeffnen(
+    nummer,
+    videoId
+) {
+
+    grussTuerchen.textContent =
+        `Türchen Nr. ${nummer}`;
+
+
+    videoGruss.classList.remove(
+        "ausgeblendet"
+    );
+
+
+    videoBereich.classList.add(
+        "verborgen"
+    );
+
+
+    playerStoppen();
+
+
+    aktuellesVideoId =
+        videoId;
+
+
+    /*
+     * WhatsApp Hoch-/Querformat-Fix:
+     * Zuerst hidden entfernen.
+     */
+    videoFenster.hidden =
+        false;
+
+
+    videoFenster.classList.remove(
+        "verborgen"
+    );
+
+
+    document.body.style.overflow =
+        "hidden";
+
+
+    grussTimer =
+        window.setTimeout(
+            () => {
+
+                videoGruss.classList.add(
+                    "ausgeblendet"
+                );
+
+
+                videoBereich.classList.remove(
+                    "verborgen"
+                );
+
+
+                videoStarten(
+                    videoId
+                );
+
+            },
+            4200
+        );
+}
+
+
+/* =========================================================
+   TÜRCHEN MIT EFFEKT ÖFFNEN
+   ========================================================= */
 
 function tuerchenMitEffektOeffnen(
     button,
@@ -1100,11 +1065,15 @@ function tuerchenMitEffektOeffnen(
     }
 
 
-    aktivesTuerchen = button;
+    aktivesTuerchen =
+        button;
 
-    aktiveTuerNummer = nummer;
+    aktiveTuerNummer =
+        nummer;
 
-    videoWirdBeendet = false;
+    videoAbschlussLaeuft =
+        false;
+
 
     button.classList.add(
         "wird-geoeffnet"
@@ -1137,11 +1106,9 @@ function tuerchenMitEffektOeffnen(
 }
 
 
-/*
- * ---------------------------------------------------------
- * Türchen aktualisieren
- * ---------------------------------------------------------
- */
+/* =========================================================
+   TÜRCHEN AKTUALISIEREN
+   ========================================================= */
 
 function tuerchenAktualisieren() {
 
@@ -1154,6 +1121,7 @@ function tuerchenAktualisieren() {
                     Number(
                         button.dataset.nummer
                     );
+
 
                 const freigeschaltet =
                     tuerIstFreigeschaltet(
@@ -1184,15 +1152,14 @@ function tuerchenAktualisieren() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Türchen erzeugen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   TÜRCHEN ERZEUGEN
+   ========================================================= */
 
 function tuerchenErzeugen() {
 
-    container.innerHTML = "";
+    container.innerHTML =
+        "";
 
 
     tuerchenDaten.forEach(
@@ -1282,6 +1249,7 @@ function tuerchenErzeugen() {
                 zahl
             );
 
+
             button.appendChild(
                 innen
             );
@@ -1339,11 +1307,9 @@ function tuerchenErzeugen() {
 }
 
 
-/*
- * ---------------------------------------------------------
- * Testmodus
- * ---------------------------------------------------------
- */
+/* =========================================================
+   TESTMODUS
+   ========================================================= */
 
 testmodus.addEventListener(
     "change",
@@ -1363,11 +1329,9 @@ testtag.addEventListener(
 );
 
 
-/*
- * ---------------------------------------------------------
- * Notfall-Startknopf
- * ---------------------------------------------------------
- */
+/* =========================================================
+   STARTKNOPF
+   ========================================================= */
 
 videoStartKnopf.addEventListener(
     "click",
@@ -1375,11 +1339,9 @@ videoStartKnopf.addEventListener(
 );
 
 
-/*
- * ---------------------------------------------------------
- * Video schließen
- * ---------------------------------------------------------
- */
+/* =========================================================
+   VIDEO SCHLIESSEN
+   ========================================================= */
 
 videoSchliessen.addEventListener(
     "click",
@@ -1402,21 +1364,18 @@ videoFenster.addEventListener(
 );
 
 
-/*
- * ---------------------------------------------------------
- * ESC-Taste
- * ---------------------------------------------------------
- */
+/* =========================================================
+   ESC-TASTE
+   ========================================================= */
 
 document.addEventListener(
     "keydown",
     (ereignis) => {
 
         if (
-            ereignis.key === "Escape" &&
-            !videoFenster.classList.contains(
-                "verborgen"
-            )
+            ereignis.key ===
+                "Escape" &&
+            !videoFenster.hidden
         ) {
 
             videoManuellSchliessen();
@@ -1425,11 +1384,9 @@ document.addEventListener(
 );
 
 
-/*
- * ---------------------------------------------------------
- * Kalender starten
- * ---------------------------------------------------------
- */
+/* =========================================================
+   KALENDER STARTEN
+   ========================================================= */
 
 tuerchenErzeugen();
 
