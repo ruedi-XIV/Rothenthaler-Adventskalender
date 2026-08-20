@@ -1571,10 +1571,15 @@ body{
 }
 /* PLAY-BUTTON wirklich exakt mittig im Player */
 
+/* =========================================================
+   VIDEO-STARTKNOPF – ENDGÜLTIGE REGELN
+   ========================================================= */
+
 .video-bereich {
     position: relative !important;
 }
 
+/* Startknopf liegt mittig über dem YouTube-Video */
 #video-starten {
     position: absolute !important;
 
@@ -1586,16 +1591,26 @@ body{
 
     margin: 0 !important;
 
-    transform: translate(-50%, -50%) !important;
+    transform:
+        translate(-50%, -50%) !important;
 
     z-index: 999999 !important;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    pointer-events: auto !important;
+    touch-action: manipulation;
 }
 
+/* JavaScript blendet den Knopf hiermit aus */
+#video-starten.verborgen {
+    display: none !important;
+}
+
+/* Ist "verborgen" entfernt, erscheint er */
 #video-starten:not(.verborgen) {
     display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-#video-starten {
-    display: none !important;
 }
