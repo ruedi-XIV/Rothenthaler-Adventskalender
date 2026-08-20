@@ -1618,3 +1618,11 @@ body{
 .video-fenster.verborgen {
     display: none !important;
 }
+/* WhatsApp-Fix: verborgen bleibt wirklich verborgen */
+[hidden] {
+    display: none !important;
+}
+
+.video-fenster[hidden] {
+    display: none !important;
+}
