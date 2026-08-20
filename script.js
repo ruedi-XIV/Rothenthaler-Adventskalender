@@ -14,100 +14,199 @@ function kalenderDatumAktualisieren() {
         });
 }
 
-const container = document.getElementById("tuerchen-container");
 
-const videoFenster = document.getElementById("video-fenster");
-const videoSchliessen = document.getElementById("video-schliessen");
-const videoGruss = document.getElementById("video-gruss");
-const grussTuerchen = document.getElementById("gruss-tuerchen");
-const videoBereich = document.querySelector(".video-bereich");
-const videoStartKnopf = document.getElementById("video-starten");
+const container =
+    document.getElementById("tuerchen-container");
 
-const testmodus = document.getElementById("testmodus");
-const testtag = document.getElementById("testtag");
-const abschiedsgruss = document.getElementById("abschiedsgruss");
-const abschiedszeile1 = document.getElementById("abschiedszeile-1");
-const abschiedszeile2 = document.getElementById("abschiedszeile-2");
-const abschiedszeile3 = document.getElementById("abschiedszeile-3");
-const abschiedsschnee = document.getElementById("abschiedsschnee");
+const videoFenster =
+    document.getElementById("video-fenster");
+
+const videoSchliessen =
+    document.getElementById("video-schliessen");
+
+const videoGruss =
+    document.getElementById("video-gruss");
+
+const grussTuerchen =
+    document.getElementById("gruss-tuerchen");
+
+const videoBereich =
+    document.querySelector(".video-bereich");
+
+const videoStartKnopf =
+    document.getElementById("video-starten");
+
+const testmodus =
+    document.getElementById("testmodus");
+
+const testtag =
+    document.getElementById("testtag");
+
+const abschiedsgruss =
+    document.getElementById("abschiedsgruss");
+
+const abschiedszeile1 =
+    document.getElementById("abschiedszeile-1");
+
+const abschiedszeile2 =
+    document.getElementById("abschiedszeile-2");
+
+const abschiedszeile3 =
+    document.getElementById("abschiedszeile-3");
+
+const abschiedsschnee =
+    document.getElementById("abschiedsschnee");
+
 
 let youtubePlayer = null;
 let youtubeApiBereit = false;
+
 let aktivesTuerchen = null;
 let aktiveTuerNummer = null;
+
 let wartendesVideo = null;
+let aktuellesVideoId = null;
+
 let grussTimer = null;
 let startPruefTimer = null;
-let aktuellesVideoId = null;
+
+let videoWirdBeendet = false;
 
 
 /*
- * Wird automatisch von der offiziellen YouTube-IFrame-API aufgerufen,
- * sobald die API vollständig geladen ist.
+ * ---------------------------------------------------------
+ * Hilfsfunktionen für den Startknopf
+ * ---------------------------------------------------------
  */
+
+function startKnopfVerbergen() {
+
+    if (!videoStartKnopf) {
+        return;
+    }
+
+    videoStartKnopf.classList.add("verborgen");
+}
+
+
+function startKnopfZeigen() {
+
+    if (!videoStartKnopf) {
+        return;
+    }
+
+    videoStartKnopf.classList.remove("verborgen");
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * YouTube-IFrame-API
+ * ---------------------------------------------------------
+ *
+ * Diese Funktion wird automatisch von YouTube aufgerufen,
+ * sobald die IFrame-API vollständig geladen ist.
+ */
+
 function onYouTubeIframeAPIReady() {
 
-    youtubePlayer = new YT.Player("youtube-player", {
+    youtubePlayer = new YT.Player(
+        "youtube-player",
+        {
+            host: "https://www.youtube-nocookie.com",
 
-        host: "https://www.youtube-nocookie.com",
+            width: "100%",
+            height: "100%",
 
-        width: "100%",
-        height: "100%",
-
-        playerVars: {
-            autoplay: 1,
-            rel: 0,
-            cc_load_policy: 0,
-            playsinline: 1
-        },
-
-        events: {
-
-            onReady: () => {
-
-                youtubeApiBereit = true;
-
-                if (wartendesVideo) {
-
-                    const videoId = wartendesVideo;
-                    wartendesVideo = null;
-                    aktuellesVideoId = videoId;
-
-                    youtubePlayer.loadVideoById(videoId);
-
-                    window.setTimeout(() => {
-
-                        if (
-                            youtubePlayer &&
-                            typeof youtubePlayer.playVideo === "function"
-                        ) {
-                            youtubePlayer.playVideo();
-                        }
-
-                    }, 300);
-
-                    videoStartPruefen();
-                }
+            playerVars: {
+                autoplay: 1,
+                rel: 0,
+                cc_load_policy: 0,
+                playsinline: 1
             },
 
-            onStateChange: (ereignis) => {
+            events: {
 
-                if (ereignis.data === YT.PlayerState.PLAYING) {
+                onReady: () => {
 
-                    videoStartKnopf.classList.add("verborgen");
+                    youtubeApiBereit = true;
 
-                    window.clearTimeout(startPruefTimer);
-                    startPruefTimer = null;
-                }
+                    /*
+                     * Falls bereits ein Türchen geöffnet wurde,
+                     * bevor die YouTube-API fertig war,
+                     * wird das Video jetzt geladen.
+                     */
+                    if (wartendesVideo) {
 
-                if (ereignis.data === YT.PlayerState.ENDED) {
-                    videoBeendet();
+                        const videoId =
+                            wartendesVideo;
+
+                        wartendesVideo = null;
+
+                        aktuellesVideoId =
+                            videoId;
+
+                        automatischenVideoStartVersuchen(
+                            videoId
+                        );
+                    }
+                },
+
+
+                onStateChange: (ereignis) => {
+
+                    /*
+                     * Video läuft tatsächlich.
+                     * Der Notfallknopf kann verschwinden.
+                     */
+                    if (
+                        ereignis.data ===
+                        YT.PlayerState.PLAYING
+                    ) {
+
+                        startKnopfVerbergen();
+
+                        window.clearTimeout(
+                            startPruefTimer
+                        );
+
+                        startPruefTimer = null;
+                    }
+
+
+                    /*
+                     * Video wurde vollständig abgespielt.
+                     */
+                    if (
+                        ereignis.data ===
+                        YT.PlayerState.ENDED
+                    ) {
+
+                        videoBeendet();
+                    }
+                },
+
+
+                /*
+                 * Sollte YouTube das Video nicht laden können,
+                 * bleibt der Kalender nicht einfach hängen.
+                 * Stattdessen erscheint der Startknopf.
+                 */
+                onError: () => {
+
+                    startKnopfZeigen();
                 }
             }
         }
-    });
+    );
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Kalenderdatum / Freischaltung
+ * ---------------------------------------------------------
+ */
 
 function aktuellerKalendertag() {
 
@@ -117,8 +216,11 @@ function aktuellerKalendertag() {
 
     const heute = new Date();
 
-    const monat = heute.getMonth() + 1;
-    const tag = heute.getDate();
+    const monat =
+        heute.getMonth() + 1;
+
+    const tag =
+        heute.getDate();
 
     if (monat < 12) {
         return 0;
@@ -133,91 +235,163 @@ function aktuellerKalendertag() {
 
 
 function tuerIstFreigeschaltet(nummer) {
-    return aktuellerKalendertag() >= nummer;
+
+    return (
+        aktuellerKalendertag() >= nummer
+    );
 }
 
 
 function findePosition(positionNummer) {
 
     return positionen.find(
-        (position) => position.position === positionNummer
+        (position) =>
+            position.position ===
+            positionNummer
     );
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Player stoppen
+ * ---------------------------------------------------------
+ */
 
 function playerStoppen() {
 
     wartendesVideo = null;
 
-    window.clearTimeout(startPruefTimer);
+    window.clearTimeout(
+        startPruefTimer
+    );
+
     startPruefTimer = null;
 
-    if (videoStartKnopf) {
-        videoStartKnopf.classList.add("verborgen");
-    }
+    startKnopfVerbergen();
 
     if (
         youtubeApiBereit &&
         youtubePlayer &&
-        typeof youtubePlayer.stopVideo === "function"
+        typeof youtubePlayer.stopVideo ===
+            "function"
     ) {
-        youtubePlayer.stopVideo();
+
+        try {
+            youtubePlayer.stopVideo();
+        } catch (fehler) {
+            console.warn(
+                "YouTube-Player konnte nicht gestoppt werden.",
+                fehler
+            );
+        }
     }
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * Tür schließen
+ * ---------------------------------------------------------
+ */
+
 function tuerchenSchliessen() {
 
-    return new Promise((resolve) => {
+    return new Promise(
+        (resolve) => {
 
-        if (!aktivesTuerchen) {
-            resolve();
-            return;
+            if (!aktivesTuerchen) {
+
+                resolve();
+                return;
+            }
+
+            const tuer =
+                aktivesTuerchen;
+
+            tuer.classList.remove(
+                "wird-geoeffnet"
+            );
+
+            tuer.classList.remove(
+                "geoeffnet"
+            );
+
+            /*
+             * Browser zwingend den aktuellen
+             * Zustand berechnen lassen.
+             */
+            void tuer.offsetWidth;
+
+            tuer.classList.add(
+                "wird-geschlossen"
+            );
+
+            window.setTimeout(
+                () => {
+
+                    tuer.classList.remove(
+                        "wird-geschlossen"
+                    );
+
+                    aktivesTuerchen = null;
+
+                    resolve();
+
+                },
+                2600
+            );
         }
-
-        const tuer = aktivesTuerchen;
-
-        tuer.classList.remove("wird-geoeffnet");
-        tuer.classList.remove("geoeffnet");
-
-        /*
-         * Nur eine einzige Schließanimation starten.
-         */
-        void tuer.offsetWidth;
-
-        tuer.classList.add("wird-geschlossen");
-
-        window.setTimeout(() => {
-
-            tuer.classList.remove("wird-geschlossen");
-            aktivesTuerchen = null;
-
-            resolve();
-
-        }, 2600);
-    });
+    );
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * Videofenster zurücksetzen
+ * ---------------------------------------------------------
+ */
+
 function videoFensterZuruecksetzen() {
 
-    window.clearTimeout(grussTimer);
+    window.clearTimeout(
+        grussTimer
+    );
+
+    window.clearTimeout(
+        startPruefTimer
+    );
 
     grussTimer = null;
+    startPruefTimer = null;
 
-    videoFenster.classList.add("verborgen");
+    videoFenster.classList.add(
+        "verborgen"
+    );
 
-    videoGruss.classList.remove("ausgeblendet");
+    videoGruss.classList.remove(
+        "ausgeblendet"
+    );
 
-    videoBereich.classList.add("verborgen");
+    videoBereich.classList.add(
+        "verborgen"
+    );
 
     document.body.style.overflow = "";
 
     playerStoppen();
 
     aktuellesVideoId = null;
+
+    videoWirdBeendet = false;
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Schneefall beim Abschiedsgruß
+ * ---------------------------------------------------------
+ */
 
 function abschiedsschneeErzeugen() {
 
@@ -263,256 +437,456 @@ function abschiedsschneeErzeugen() {
     ];
 
 
-    schichten.forEach((schicht) => {
+    schichten.forEach(
+        (schicht) => {
 
-        for (
-            let index = 0;
-            index < schicht.anzahl;
-            index++
-        ) {
+            for (
+                let index = 0;
+                index < schicht.anzahl;
+                index++
+            ) {
 
-            const flocke =
-                document.createElement("span");
+                const flocke =
+                    document.createElement(
+                        "span"
+                    );
 
-            flocke.className =
-                `abschiedsflocke abschiedsflocke-${schicht.klasse}`;
+                flocke.className =
+                    `abschiedsflocke abschiedsflocke-${schicht.klasse}`;
 
-            const groesse =
-                schicht.minGroesse +
-                Math.random() *
-                (schicht.maxGroesse - schicht.minGroesse);
 
-            const dauer =
-                schicht.minDauer +
-                Math.random() *
-                (schicht.maxDauer - schicht.minDauer);
+                const groesse =
+                    schicht.minGroesse +
+                    Math.random() *
+                    (
+                        schicht.maxGroesse -
+                        schicht.minGroesse
+                    );
 
-            const drift =
-                -schicht.maxDrift +
-                Math.random() *
-                schicht.maxDrift * 2;
 
-            const deckkraft =
-                schicht.minDeckkraft +
-                Math.random() *
-                (schicht.maxDeckkraft - schicht.minDeckkraft);
+                const dauer =
+                    schicht.minDauer +
+                    Math.random() *
+                    (
+                        schicht.maxDauer -
+                        schicht.minDauer
+                    );
 
-            flocke.style.left =
-                `${Math.random() * 100}%`;
 
-            flocke.style.width =
-                `${groesse}px`;
+                const drift =
+                    -schicht.maxDrift +
+                    Math.random() *
+                    schicht.maxDrift * 2;
 
-            flocke.style.height =
-                `${groesse}px`;
 
-            flocke.style.opacity =
-                deckkraft;
+                const deckkraft =
+                    schicht.minDeckkraft +
+                    Math.random() *
+                    (
+                        schicht.maxDeckkraft -
+                        schicht.minDeckkraft
+                    );
 
-            flocke.style.setProperty(
-                "--fall-dauer",
-                `${dauer}s`
-            );
 
-            flocke.style.setProperty(
-                "--fall-verzoegerung",
-                `${Math.random() * -dauer}s`
-            );
+                flocke.style.left =
+                    `${Math.random() * 100}%`;
 
-            flocke.style.setProperty(
-                "--seitendrift",
-                `${drift}px`
-            );
+                flocke.style.width =
+                    `${groesse}px`;
 
-            abschiedsschnee.appendChild(flocke);
+                flocke.style.height =
+                    `${groesse}px`;
+
+                flocke.style.opacity =
+                    deckkraft;
+
+
+                flocke.style.setProperty(
+                    "--fall-dauer",
+                    `${dauer}s`
+                );
+
+
+                flocke.style.setProperty(
+                    "--fall-verzoegerung",
+                    `${Math.random() * -dauer}s`
+                );
+
+
+                flocke.style.setProperty(
+                    "--seitendrift",
+                    `${drift}px`
+                );
+
+
+                abschiedsschnee.appendChild(
+                    flocke
+                );
+            }
         }
-    });
+    );
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Abschiedsgruß
+ * ---------------------------------------------------------
+ */
 
 function abschiedsgrussZeigen(nummer) {
 
-    return new Promise((resolve) => {
+    return new Promise(
+        (resolve) => {
 
-        if (nummer === 24) {
+            if (nummer === 24) {
 
-            abschiedszeile1.textContent =
-                "Danke, dass de jeden Tog mit dabei warst.";
+                abschiedszeile1.textContent =
+                    "Danke, dass de jeden Tog mit dabei warst.";
 
-            abschiedszeile2.textContent =
-                "Ich wünsch dir fröhliche Weihnachten!";
+                abschiedszeile2.textContent =
+                    "Ich wünsch dir fröhliche Weihnachten!";
 
-            abschiedszeile3.textContent =
-                "Bis zum nächsten Advent!";
+                abschiedszeile3.textContent =
+                    "Bis zum nächsten Advent!";
 
-        } else {
+            } else {
 
-            abschiedszeile1.textContent =
-                "De nächste Geschicht wart schie auf dich...";
+                abschiedszeile1.textContent =
+                    "De nächste Geschicht wart schie auf dich...";
 
-            abschiedszeile2.textContent =
-                "Guck när morschn wiedr rei.";
+                abschiedszeile2.textContent =
+                    "Guck när morschn wiedr rei.";
 
-            abschiedszeile3.textContent = "";
+                abschiedszeile3.textContent =
+                    "";
+            }
+
+
+            abschiedsschneeErzeugen();
+
+            abschiedsgruss.classList.remove(
+                "verborgen"
+            );
+
+            abschiedsgruss.classList.add(
+                "sichtbar"
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    abschiedsgruss.classList.remove(
+                        "sichtbar"
+                    );
+
+                    abschiedsgruss.classList.add(
+                        "ausblendend"
+                    );
+
+                },
+                6000
+            );
+
+
+            window.setTimeout(
+                () => {
+
+                    abschiedsgruss.classList.add(
+                        "verborgen"
+                    );
+
+                    abschiedsgruss.classList.remove(
+                        "ausblendend"
+                    );
+
+                    abschiedsschnee.innerHTML =
+                        "";
+
+                    resolve();
+
+                },
+                7200
+            );
         }
-
-
-        abschiedsschneeErzeugen();
-
-        abschiedsgruss.classList.remove("verborgen");
-
-        abschiedsgruss.classList.add("sichtbar");
-
-
-        window.setTimeout(() => {
-
-            abschiedsgruss.classList.remove("sichtbar");
-
-            abschiedsgruss.classList.add("ausblendend");
-
-        }, 6000);
-
-
-        window.setTimeout(() => {
-
-            abschiedsgruss.classList.add("verborgen");
-
-            abschiedsgruss.classList.remove("ausblendend");
-
-            abschiedsschnee.innerHTML = "";
-
-            resolve();
-
-        }, 7200);
-    });
+    );
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * Video wurde vollständig abgespielt
+ * ---------------------------------------------------------
+ */
+
 async function videoBeendet() {
 
-    const nummer = aktiveTuerNummer;
+    /*
+     * Verhindert, dass das ENDED-Ereignis
+     * versehentlich zweimal abgearbeitet wird.
+     */
+    if (videoWirdBeendet) {
+        return;
+    }
+
+    videoWirdBeendet = true;
+
+    const nummer =
+        aktiveTuerNummer;
+
 
     await new Promise(
         (resolve) =>
-            window.setTimeout(resolve, 1800)
+            window.setTimeout(
+                resolve,
+                1800
+            )
     );
+
 
     videoFenster.classList.add(
         "video-fenster-ausblendend"
     );
 
+
     await new Promise(
         (resolve) =>
-            window.setTimeout(resolve, 900)
+            window.setTimeout(
+                resolve,
+                900
+            )
     );
 
+
     videoFensterZuruecksetzen();
+
 
     videoFenster.classList.remove(
         "video-fenster-ausblendend"
     );
 
+
     await new Promise(
         (resolve) =>
-            window.setTimeout(resolve, 700)
+            window.setTimeout(
+                resolve,
+                700
+            )
     );
+
 
     await tuerchenSchliessen();
 
     aktiveTuerNummer = null;
 
-    await abschiedsgrussZeigen(nummer);
+    await abschiedsgrussZeigen(
+        nummer
+    );
 }
 
 
+/*
+ * ---------------------------------------------------------
+ * Video manuell schließen
+ * ---------------------------------------------------------
+ */
+
 async function videoManuellSchliessen() {
+
+    if (videoWirdBeendet) {
+        return;
+    }
+
+    videoWirdBeendet = true;
 
     videoFensterZuruecksetzen();
 
     await tuerchenSchliessen();
 
     aktiveTuerNummer = null;
+
+    videoWirdBeendet = false;
 }
 
 
 /*
- * Prüft, ob WhatsApp oder ein anderer Browser
- * den automatischen Videostart verhindert hat.
+ * ---------------------------------------------------------
+ * Prüfen, ob das Video wirklich läuft
+ * ---------------------------------------------------------
  */
+
 function videoStartPruefen() {
 
-    window.clearTimeout(startPruefTimer);
+    window.clearTimeout(
+        startPruefTimer
+    );
 
-    startPruefTimer = window.setTimeout(() => {
+    /*
+     * Etwas mehr Zeit als vorher.
+     * Gerade WhatsApp und langsame Mobilverbindungen
+     * brauchen gelegentlich länger.
+     */
+    startPruefTimer =
+        window.setTimeout(
+            () => {
 
-        if (
-            youtubeApiBereit &&
-            youtubePlayer &&
-            typeof youtubePlayer.getPlayerState === "function"
-        ) {
+                if (
+                    youtubeApiBereit &&
+                    youtubePlayer &&
+                    typeof youtubePlayer.getPlayerState ===
+                        "function"
+                ) {
 
-            const status =
-                youtubePlayer.getPlayerState();
+                    let status = null;
 
-            if (status === YT.PlayerState.PLAYING) {
+                    try {
 
-                videoStartKnopf.classList.add(
-                    "verborgen"
-                );
+                        status =
+                            youtubePlayer.getPlayerState();
 
-            } else {
+                    } catch (fehler) {
 
-                videoStartKnopf.classList.remove(
-                    "verborgen"
-                );
-            }
+                        console.warn(
+                            "Playerstatus konnte nicht gelesen werden.",
+                            fehler
+                        );
+                    }
 
-        } else {
 
-            videoStartKnopf.classList.remove(
-                "verborgen"
-            );
-        }
+                    if (
+                        status ===
+                        YT.PlayerState.PLAYING
+                    ) {
 
-    }, 1600);
+                        startKnopfVerbergen();
+
+                    } else {
+
+                        /*
+                         * Autoplay hat nicht funktioniert.
+                         * Jetzt erhält der Besucher einen
+                         * echten Startknopf.
+                         */
+                        startKnopfZeigen();
+                    }
+
+                } else {
+
+                    startKnopfZeigen();
+                }
+
+            },
+            2500
+        );
 }
 
 
 /*
- * Startet das ausgewählte YouTube-Video.
+ * ---------------------------------------------------------
+ * Automatischen Videostart versuchen
+ * ---------------------------------------------------------
  */
+
+function automatischenVideoStartVersuchen(
+    videoId
+) {
+
+    if (
+        !youtubeApiBereit ||
+        !youtubePlayer
+    ) {
+
+        wartendesVideo = videoId;
+
+        videoStartPruefen();
+
+        return;
+    }
+
+
+    try {
+
+        /*
+         * loadVideoById versucht das Video direkt
+         * zu laden und abzuspielen.
+         */
+        youtubePlayer.loadVideoById(
+            videoId
+        );
+
+    } catch (fehler) {
+
+        console.warn(
+            "Automatischer Videostart fehlgeschlagen.",
+            fehler
+        );
+
+        startKnopfZeigen();
+
+        return;
+    }
+
+
+    /*
+     * Kein hektischer zweiter loadVideoById-Aufruf.
+     * Wir geben YouTube erst einmal Zeit.
+     */
+    window.setTimeout(
+        () => {
+
+            if (
+                youtubePlayer &&
+                typeof youtubePlayer.playVideo ===
+                    "function"
+            ) {
+
+                try {
+                    youtubePlayer.playVideo();
+                } catch (fehler) {
+                    console.warn(
+                        "playVideo wurde vom Browser blockiert.",
+                        fehler
+                    );
+                }
+            }
+
+        },
+        650
+    );
+
+
+    videoStartPruefen();
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * Video starten
+ * ---------------------------------------------------------
+ */
+
 function videoStarten(videoId) {
 
     aktuellesVideoId = videoId;
 
-    videoStartKnopf.classList.add("verborgen");
+    startKnopfVerbergen();
 
     if (
         youtubeApiBereit &&
         youtubePlayer
     ) {
 
-        youtubePlayer.loadVideoById(videoId);
-
-        /*
-         * Zweiter Startversuch.
-         * Hilft bei manchen mobilen Browsern.
-         */
-        window.setTimeout(() => {
-
-            if (
-                youtubePlayer &&
-                typeof youtubePlayer.playVideo === "function"
-            ) {
-                youtubePlayer.playVideo();
-            }
-
-        }, 300);
-
-        videoStartPruefen();
+        automatischenVideoStartVersuchen(
+            videoId
+        );
 
     } else {
 
+        /*
+         * Die YouTube-API ist noch nicht fertig.
+         * Das Video wird vorgemerkt.
+         */
         wartendesVideo = videoId;
 
         videoStartPruefen();
@@ -520,32 +894,165 @@ function videoStarten(videoId) {
 }
 
 
-function videoOeffnen(nummer, videoId) {
+/*
+ * ---------------------------------------------------------
+ * MANUELLER VIDEOSTART
+ *
+ * Dieser Weg wird ausschließlich durch einen echten
+ * Fingertipp/Mausklick ausgelöst.
+ * Das ist besonders für WhatsApp, Android und iPhone
+ * wichtig, weil Browser Autoplay blockieren dürfen.
+ * ---------------------------------------------------------
+ */
+
+function videoManuellStarten() {
+
+    if (!aktuellesVideoId) {
+        return;
+    }
+
+
+    startKnopfVerbergen();
+
+
+    if (
+        !youtubeApiBereit ||
+        !youtubePlayer
+    ) {
+
+        /*
+         * API ist ungewöhnlich langsam.
+         * Video vormerken und Knopf wieder zeigen.
+         */
+        wartendesVideo =
+            aktuellesVideoId;
+
+        startKnopfZeigen();
+
+        return;
+    }
+
+
+    try {
+
+        const status =
+            typeof youtubePlayer.getPlayerState ===
+                "function"
+                ? youtubePlayer.getPlayerState()
+                : null;
+
+
+        /*
+         * Wenn der Player noch gar nicht gestartet,
+         * nur vorgeladen oder in einem Fehlerzustand ist,
+         * wird das aktuelle Video durch diesen echten
+         * Benutzerklick neu geladen.
+         */
+        if (
+            status ===
+                YT.PlayerState.UNSTARTED ||
+            status ===
+                YT.PlayerState.CUED ||
+            status === -1 ||
+            status === null
+        ) {
+
+            youtubePlayer.loadVideoById(
+                aktuellesVideoId
+            );
+        }
+
+
+        /*
+         * Entscheidend:
+         * playVideo läuft direkt innerhalb des Klicks.
+         */
+        youtubePlayer.playVideo();
+
+
+    } catch (fehler) {
+
+        console.error(
+            "Manueller Videostart fehlgeschlagen.",
+            fehler
+        );
+
+        startKnopfZeigen();
+
+        return;
+    }
+
+
+    /*
+     * Nach dem Fingertipp noch einmal kontrollieren.
+     * Sollte YouTube trotzdem nicht laufen,
+     * erscheint der Knopf erneut.
+     */
+    videoStartPruefen();
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * Videofenster öffnen
+ * ---------------------------------------------------------
+ */
+
+function videoOeffnen(
+    nummer,
+    videoId
+) {
 
     grussTuerchen.textContent =
         `Türchen Nr. ${nummer}`;
 
-    videoGruss.classList.remove("ausgeblendet");
+    videoGruss.classList.remove(
+        "ausgeblendet"
+    );
 
-    videoBereich.classList.add("verborgen");
+    videoBereich.classList.add(
+        "verborgen"
+    );
 
     playerStoppen();
 
-    videoFenster.classList.remove("verborgen");
+    aktuellesVideoId = videoId;
 
-    document.body.style.overflow = "hidden";
+    videoFenster.classList.remove(
+        "verborgen"
+    );
 
-    grussTimer = window.setTimeout(() => {
+    document.body.style.overflow =
+        "hidden";
 
-        videoGruss.classList.add("ausgeblendet");
 
-        videoBereich.classList.remove("verborgen");
+    grussTimer =
+        window.setTimeout(
+            () => {
 
-        videoStarten(videoId);
+                videoGruss.classList.add(
+                    "ausgeblendet"
+                );
 
-    }, 4200);
+                videoBereich.classList.remove(
+                    "verborgen"
+                );
+
+                videoStarten(
+                    videoId
+                );
+
+            },
+            4200
+        );
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Tür öffnen
+ * ---------------------------------------------------------
+ */
 
 function tuerchenMitEffektOeffnen(
     button,
@@ -555,187 +1062,248 @@ function tuerchenMitEffektOeffnen(
 
     if (
         aktivesTuerchen ||
-        button.classList.contains("wird-geoeffnet")
+        button.classList.contains(
+            "wird-geoeffnet"
+        )
     ) {
+
         return;
     }
+
 
     aktivesTuerchen = button;
 
     aktiveTuerNummer = nummer;
 
-    button.classList.add("wird-geoeffnet");
+    videoWirdBeendet = false;
+
+    button.classList.add(
+        "wird-geoeffnet"
+    );
 
 
-    window.setTimeout(() => {
+    window.setTimeout(
+        () => {
 
-        /*
-         * Die Öffnungsklasse bleibt bis zum
-         * späteren Schließen aktiv.
-         */
-        button.classList.add("geoeffnet");
-
-
-        window.setTimeout(() => {
-
-            videoOeffnen(
-                nummer,
-                videoId
+            button.classList.add(
+                "geoeffnet"
             );
 
-        }, 1500);
 
-    }, 950);
+            window.setTimeout(
+                () => {
+
+                    videoOeffnen(
+                        nummer,
+                        videoId
+                    );
+
+                },
+                1500
+            );
+
+        },
+        950
+    );
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Türchen aktualisieren
+ * ---------------------------------------------------------
+ */
 
 function tuerchenAktualisieren() {
 
     document
         .querySelectorAll(".tuer")
-        .forEach((button) => {
+        .forEach(
+            (button) => {
 
-            const nummer =
-                Number(button.dataset.nummer);
+                const nummer =
+                    Number(
+                        button.dataset.nummer
+                    );
 
-            const freigeschaltet =
-                tuerIstFreigeschaltet(nummer);
+                const freigeschaltet =
+                    tuerIstFreigeschaltet(
+                        nummer
+                    );
 
-            button.classList.toggle(
-                "freigeschaltet",
-                freigeschaltet
-            );
 
-            button.classList.toggle(
-                "gesperrt",
-                !freigeschaltet
-            );
+                button.classList.toggle(
+                    "freigeschaltet",
+                    freigeschaltet
+                );
 
-            button.setAttribute(
-                "aria-disabled",
-                freigeschaltet
-                    ? "false"
-                    : "true"
-            );
-        });
+
+                button.classList.toggle(
+                    "gesperrt",
+                    !freigeschaltet
+                );
+
+
+                button.setAttribute(
+                    "aria-disabled",
+                    freigeschaltet
+                        ? "false"
+                        : "true"
+                );
+            }
+        );
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Türchen erzeugen
+ * ---------------------------------------------------------
+ */
 
 function tuerchenErzeugen() {
 
     container.innerHTML = "";
 
-    tuerchenDaten.forEach((tuer) => {
 
-        const position =
-            findePosition(tuer.position);
+    tuerchenDaten.forEach(
+        (tuer) => {
 
-        if (!position) {
+            const position =
+                findePosition(
+                    tuer.position
+                );
 
-            console.error(
-                `Position ${tuer.position} wurde nicht gefunden.`
+
+            if (!position) {
+
+                console.error(
+                    `Position ${tuer.position} wurde nicht gefunden.`
+                );
+
+                return;
+            }
+
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+
+            button.className =
+                "tuer";
+
+            button.type =
+                "button";
+
+            button.dataset.nummer =
+                tuer.nummer;
+
+
+            button.setAttribute(
+                "aria-label",
+                `Türchen ${tuer.nummer}`
             );
 
-            return;
-        }
+
+            button.style.left =
+                `${position.left}%`;
+
+            button.style.top =
+                `${position.top}%`;
 
 
-        const button =
-            document.createElement("button");
-
-        button.className = "tuer";
-
-        button.type = "button";
-
-        button.dataset.nummer =
-            tuer.nummer;
-
-        button.setAttribute(
-            "aria-label",
-            `Türchen ${tuer.nummer}`
-        );
-
-        button.style.left =
-            `${position.left}%`;
-
-        button.style.top =
-            `${position.top}%`;
-
-
-        const innen =
-            document.createElement("span");
-
-        innen.className = "tuer-innen";
-
-        innen.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-
-        const klappe =
-            document.createElement("span");
-
-        klappe.className =
-            "tuer-klappe";
-
-
-        const zahl =
-            document.createElement("span");
-
-        zahl.className =
-            "tuer-zahl";
-
-        zahl.textContent =
-            tuer.nummer;
-
-
-        klappe.appendChild(zahl);
-
-        button.appendChild(innen);
-
-        button.appendChild(klappe);
-
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                if (
-                    !tuerIstFreigeschaltet(
-                        tuer.nummer
-                    )
-                ) {
-
-                    alert(
-                        `Dieses Türchen öffnet sich erst am ${tuer.nummer}. Dezember.`
-                    );
-
-                    return;
-                }
-
-
-                if (!tuer.video) {
-
-                    alert(
-                        `Für Türchen ${tuer.nummer} ist noch kein Video eingetragen.`
-                    );
-
-                    return;
-                }
-
-
-                tuerchenMitEffektOeffnen(
-                    button,
-                    tuer.nummer,
-                    tuer.video
+            const innen =
+                document.createElement(
+                    "span"
                 );
-            }
-        );
+
+            innen.className =
+                "tuer-innen";
+
+            innen.setAttribute(
+                "aria-hidden",
+                "true"
+            );
 
 
-        container.appendChild(button);
-    });
+            const klappe =
+                document.createElement(
+                    "span"
+                );
+
+            klappe.className =
+                "tuer-klappe";
+
+
+            const zahl =
+                document.createElement(
+                    "span"
+                );
+
+            zahl.className =
+                "tuer-zahl";
+
+            zahl.textContent =
+                tuer.nummer;
+
+
+            klappe.appendChild(
+                zahl
+            );
+
+            button.appendChild(
+                innen
+            );
+
+            button.appendChild(
+                klappe
+            );
+
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        !tuerIstFreigeschaltet(
+                            tuer.nummer
+                        )
+                    ) {
+
+                        alert(
+                            `Dieses Türchen öffnet sich erst am ${tuer.nummer}. Dezember.`
+                        );
+
+                        return;
+                    }
+
+
+                    if (!tuer.video) {
+
+                        alert(
+                            `Für Türchen ${tuer.nummer} ist noch kein Video eingetragen.`
+                        );
+
+                        return;
+                    }
+
+
+                    tuerchenMitEffektOeffnen(
+                        button,
+                        tuer.nummer,
+                        tuer.video
+                    );
+                }
+            );
+
+
+            container.appendChild(
+                button
+            );
+        }
+    );
 
 
     tuerchenAktualisieren();
@@ -743,8 +1311,11 @@ function tuerchenErzeugen() {
 
 
 /*
+ * ---------------------------------------------------------
  * Testmodus
+ * ---------------------------------------------------------
  */
+
 testmodus.addEventListener(
     "change",
     () => {
@@ -764,62 +1335,23 @@ testtag.addEventListener(
 
 
 /*
- * Notfall-Startknopf:
- * Wird nur sichtbar, wenn Autoplay blockiert wurde.
+ * ---------------------------------------------------------
+ * Notfall-Startknopf
+ * ---------------------------------------------------------
  */
+
 videoStartKnopf.addEventListener(
     "click",
-    () => {
-
-        videoStartKnopf.classList.add(
-            "verborgen"
-        );
-
-        if (
-            youtubeApiBereit &&
-            youtubePlayer &&
-            typeof youtubePlayer.playVideo === "function"
-        ) {
-
-            const status =
-                typeof youtubePlayer.getPlayerState === "function"
-                    ? youtubePlayer.getPlayerState()
-                    : null;
-
-
-            if (
-                aktuellesVideoId &&
-                (
-                    status === YT.PlayerState.UNSTARTED ||
-                    status === YT.PlayerState.CUED ||
-                    status === -1
-                )
-            ) {
-
-                youtubePlayer.loadVideoById(
-                    aktuellesVideoId
-                );
-            }
-
-
-            youtubePlayer.playVideo();
-
-            videoStartPruefen();
-
-        } else if (aktuellesVideoId) {
-
-            wartendesVideo =
-                aktuellesVideoId;
-
-            videoStartPruefen();
-        }
-    }
+    videoManuellStarten
 );
 
 
 /*
+ * ---------------------------------------------------------
  * Video schließen
+ * ---------------------------------------------------------
  */
+
 videoSchliessen.addEventListener(
     "click",
     videoManuellSchliessen
@@ -831,8 +1363,10 @@ videoFenster.addEventListener(
     (ereignis) => {
 
         if (
-            ereignis.target === videoFenster
+            ereignis.target ===
+            videoFenster
         ) {
+
             videoManuellSchliessen();
         }
     }
@@ -840,8 +1374,11 @@ videoFenster.addEventListener(
 
 
 /*
+ * ---------------------------------------------------------
  * ESC-Taste
+ * ---------------------------------------------------------
  */
+
 document.addEventListener(
     "keydown",
     (ereignis) => {
@@ -852,6 +1389,7 @@ document.addEventListener(
                 "verborgen"
             )
         ) {
+
             videoManuellSchliessen();
         }
     }
@@ -859,8 +1397,11 @@ document.addEventListener(
 
 
 /*
+ * ---------------------------------------------------------
  * Kalender starten
+ * ---------------------------------------------------------
  */
+
 tuerchenErzeugen();
 
 kalenderDatumAktualisieren();
