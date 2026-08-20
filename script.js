@@ -369,6 +369,8 @@ function videoFensterZuruecksetzen() {
         "verborgen"
     );
 
+    videoFenster.hidden = true;
+
     videoGruss.classList.remove(
         "ausgeblendet"
     );
@@ -1017,6 +1019,8 @@ function videoOeffnen(
     playerStoppen();
 
     aktuellesVideoId = videoId;
+
+    videoFenster.hidden = false;
 
     videoFenster.classList.remove(
         "verborgen"
