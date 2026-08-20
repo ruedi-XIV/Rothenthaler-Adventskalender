@@ -1614,3 +1614,7 @@ body{
 #video-starten:not(.verborgen) {
     display: flex !important;
 }
+/* Videofenster muss auch im Querformat verborgen bleiben */
+.video-fenster.verborgen {
+    display: none !important;
+}
