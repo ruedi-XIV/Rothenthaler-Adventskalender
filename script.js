@@ -110,99 +110,165 @@ function startKnopfZeigen() {
 
 function onYouTubeIframeAPIReady() {
 
-    youtubePlayer = new YT.Player(
-        "youtube-player",
-        {
-            host: "https://www.youtube-nocookie.com",
+    /*
+     * Wichtig für WhatsApp:
+     * Den Player NICHT schon beim Laden der Seite erzeugen.
+     * Zu diesem Zeitpunkt ist das Videofenster noch verborgen.
+     *
+     * Wir merken uns nur, dass die YouTube-API bereit ist.
+     */
+    youtubeApiBereit = true;
 
-            width: "100%",
-            height: "100%",
+    if (wartendesVideo) {
 
-            playerVars: {
-                autoplay: 1,
-                rel: 0,
-                cc_load_policy: 0,
-                playsinline: 1
-            },
+        const videoId = wartendesVideo;
 
-            events: {
+        wartendesVideo = null;
 
-                onReady: () => {
+        videoStarten(videoId);
+    }
+}
+function youtubePlayerErzeugen(videoId) {
 
-                    youtubeApiBereit = true;
+    /*
+     * Falls von einem vorherigen Versuch noch ein Player
+     * existiert, wird er zuerst vollständig entfernt.
+     */
+    if (youtubePlayer) {
 
-                    /*
-                     * Falls bereits ein Türchen geöffnet wurde,
-                     * bevor die YouTube-API fertig war,
-                     * wird das Video jetzt geladen.
-                     */
-                    if (wartendesVideo) {
+        try {
 
-                        const videoId =
-                            wartendesVideo;
+            if (
+                typeof youtubePlayer.destroy ===
+                "function"
+            ) {
+                youtubePlayer.destroy();
+            }
 
-                        wartendesVideo = null;
+        } catch (fehler) {
 
-                        aktuellesVideoId =
-                            videoId;
+            console.warn(
+                "Alter YouTube-Player konnte nicht entfernt werden.",
+                fehler
+            );
+        }
 
-                        automatischenVideoStartVersuchen(
-                            videoId
-                        );
-                    }
+        youtubePlayer = null;
+    }
+
+
+    /*
+     * Nach destroy() kann das ursprüngliche DIV fehlen.
+     * Deshalb erzeugen wir es sicherheitshalber neu.
+     */
+    let playerElement =
+        document.getElementById(
+            "youtube-player"
+        );
+
+    if (!playerElement) {
+
+        playerElement =
+            document.createElement(
+                "div"
+            );
+
+        playerElement.id =
+            "youtube-player";
+
+        playerElement.setAttribute(
+            "aria-label",
+            "Rothenthaler Adventskalender Video"
+        );
+
+        videoBereich.insertBefore(
+            playerElement,
+            videoStartKnopf
+        );
+    }
+
+
+    /*
+     * Jetzt erst wird der echte YouTube-Player erzeugt.
+     * Das Videofenster ist zu diesem Zeitpunkt bereits sichtbar.
+     */
+    youtubePlayer =
+        new YT.Player(
+            "youtube-player",
+            {
+
+                width: "100%",
+                height: "100%",
+
+                videoId: videoId,
+
+                playerVars: {
+                    autoplay: 1,
+                    rel: 0,
+                    cc_load_policy: 0,
+                    playsinline: 1
                 },
 
+                events: {
 
-                onStateChange: (ereignis) => {
+                    onReady: () => {
 
-                    /*
-                     * Video läuft tatsächlich.
-                     * Der Notfallknopf kann verschwinden.
-                     */
-                    if (
-                        ereignis.data ===
-                        YT.PlayerState.PLAYING
-                    ) {
+                        try {
 
-                        startKnopfVerbergen();
+                            youtubePlayer.playVideo();
 
-                        window.clearTimeout(
-                            startPruefTimer
+                        } catch (fehler) {
+
+                            console.warn(
+                                "Autoplay wurde blockiert.",
+                                fehler
+                            );
+                        }
+
+                        videoStartPruefen();
+                    },
+
+
+                    onStateChange: (ereignis) => {
+
+                        if (
+                            ereignis.data ===
+                            YT.PlayerState.PLAYING
+                        ) {
+
+                            startKnopfVerbergen();
+
+                            window.clearTimeout(
+                                startPruefTimer
+                            );
+
+                            startPruefTimer = null;
+                        }
+
+
+                        if (
+                            ereignis.data ===
+                            YT.PlayerState.ENDED
+                        ) {
+
+                            videoBeendet();
+                        }
+                    },
+
+
+                    onError: (ereignis) => {
+
+                        console.warn(
+                            "YouTube-Fehler:",
+                            ereignis.data
                         );
 
-                        startPruefTimer = null;
+                        startKnopfZeigen();
                     }
-
-
-                    /*
-                     * Video wurde vollständig abgespielt.
-                     */
-                    if (
-                        ereignis.data ===
-                        YT.PlayerState.ENDED
-                    ) {
-
-                        videoBeendet();
-                    }
-                },
-
-
-                /*
-                 * Sollte YouTube das Video nicht laden können,
-                 * bleibt der Kalender nicht einfach hängen.
-                 * Stattdessen erscheint der Startknopf.
-                 */
-                onError: () => {
-
-                    startKnopfZeigen();
                 }
             }
-        }
-    );
-}
-
-
-/*
+        );
+}/*
  * ---------------------------------------------------------
  * Kalenderdatum / Freischaltung
  * ---------------------------------------------------------
@@ -870,31 +936,43 @@ function automatischenVideoStartVersuchen(
 
 function videoStarten(videoId) {
 
-    aktuellesVideoId = videoId;
+    aktuellesVideoId =
+        videoId;
 
     startKnopfVerbergen();
 
+
+    /*
+     * Falls die YouTube-API noch nicht geladen ist,
+     * merken wir uns das Video.
+     */
     if (
-        youtubeApiBereit &&
-        youtubePlayer
+        !youtubeApiBereit ||
+        typeof YT === "undefined" ||
+        typeof YT.Player === "undefined"
     ) {
 
-        automatischenVideoStartVersuchen(
-            videoId
-        );
-
-    } else {
+        wartendesVideo =
+            videoId;
 
         /*
-         * Die YouTube-API ist noch nicht fertig.
-         * Das Video wird vorgemerkt.
+         * Nach kurzer Zeit Startknopf anbieten.
          */
-        wartendesVideo = videoId;
-
         videoStartPruefen();
-    }
-}
 
+        return;
+    }
+
+
+    /*
+     * Der entscheidende WhatsApp-Fix:
+     * Player wird JETZT erzeugt,
+     * also erst nachdem der Videobereich sichtbar ist.
+     */
+    youtubePlayerErzeugen(
+        videoId
+    );
+}
 
 /*
  * ---------------------------------------------------------
@@ -919,13 +997,10 @@ function videoManuellStarten() {
 
     if (
         !youtubeApiBereit ||
-        !youtubePlayer
+        typeof YT === "undefined" ||
+        typeof YT.Player === "undefined"
     ) {
 
-        /*
-         * API ist ungewöhnlich langsam.
-         * Video vormerken und Knopf wieder zeigen.
-         */
         wartendesVideo =
             aktuellesVideoId;
 
@@ -935,122 +1010,72 @@ function videoManuellStarten() {
     }
 
 
-    try {
+    /*
+     * Zuerst versuchen wir den vorhandenen Player
+     * direkt durch den Fingertipp zu starten.
+     */
+    if (
+        youtubePlayer &&
+        typeof youtubePlayer.playVideo ===
+            "function"
+    ) {
 
-        const status =
-            typeof youtubePlayer.getPlayerState ===
-                "function"
-                ? youtubePlayer.getPlayerState()
-                : null;
+        try {
 
+            youtubePlayer.playVideo();
 
-        /*
-         * Wenn der Player noch gar nicht gestartet,
-         * nur vorgeladen oder in einem Fehlerzustand ist,
-         * wird das aktuelle Video durch diesen echten
-         * Benutzerklick neu geladen.
-         */
-        if (
-            status ===
-                YT.PlayerState.UNSTARTED ||
-            status ===
-                YT.PlayerState.CUED ||
-            status === -1 ||
-            status === null
-        ) {
+        } catch (fehler) {
 
-            youtubePlayer.loadVideoById(
-                aktuellesVideoId
+            console.warn(
+                "Direkter Start fehlgeschlagen.",
+                fehler
             );
         }
 
 
-        /*
-         * Entscheidend:
-         * playVideo läuft direkt innerhalb des Klicks.
-         */
-        youtubePlayer.playVideo();
-
-
-    } catch (fehler) {
-
-        console.error(
-            "Manueller Videostart fehlgeschlagen.",
-            fehler
-        );
-
-        startKnopfZeigen();
-
-        return;
-    }
-
-
-    /*
-     * Nach dem Fingertipp noch einmal kontrollieren.
-     * Sollte YouTube trotzdem nicht laufen,
-     * erscheint der Knopf erneut.
-     */
-    videoStartPruefen();
-}
-
-
-/*
- * ---------------------------------------------------------
- * Videofenster öffnen
- * ---------------------------------------------------------
- */
-
-function videoOeffnen(
-    nummer,
-    videoId
-) {
-
-    grussTuerchen.textContent =
-        `Türchen Nr. ${nummer}`;
-
-    videoGruss.classList.remove(
-        "ausgeblendet"
-    );
-
-    videoBereich.classList.add(
-        "verborgen"
-    );
-
-    playerStoppen();
-
-    aktuellesVideoId = videoId;
-
-    videoFenster.hidden = false;
-
-    videoFenster.classList.remove(
-        "verborgen"
-    );
-
-    document.body.style.overflow =
-        "hidden";
-
-
-    grussTimer =
         window.setTimeout(
             () => {
 
-                videoGruss.classList.add(
-                    "ausgeblendet"
-                );
+                let status = null;
 
-                videoBereich.classList.remove(
-                    "verborgen"
-                );
+                try {
 
-                videoStarten(
-                    videoId
-                );
+                    status =
+                        youtubePlayer.getPlayerState();
+
+                } catch (fehler) {
+                    status = null;
+                }
+
+
+                /*
+                 * Läuft er trotz Fingertipp nicht,
+                 * erzeugen wir einen komplett neuen Player.
+                 */
+                if (
+                    status !==
+                    YT.PlayerState.PLAYING
+                ) {
+
+                    youtubePlayerErzeugen(
+                        aktuellesVideoId
+                    );
+                }
 
             },
-            4200
+            700
         );
-}
 
+    } else {
+
+        youtubePlayerErzeugen(
+            aktuellesVideoId
+        );
+    }
+
+
+    videoStartPruefen();
+}
 
 /*
  * ---------------------------------------------------------
