@@ -251,7 +251,11 @@ function aktuellerKalendertag() {
         );
     }
 
+    if (monat === 1 && tag <= 6) {
     return 24;
+}
+
+return 0;
 }
 
 
@@ -1262,7 +1266,20 @@ function tuerchenErzeugen() {
 /* =========================================================
    TESTMODUS
    ========================================================= */
+/* Testmodus ab 1. Dezember 2026 automatisch ausschalten */
+const testbereich = document.getElementById("testbereich");
+const jetzt = new Date();
 
+const kalenderStart = new Date(2026, 11, 1, 0, 0, 0);
+const kalenderEnde = new Date(2027, 0, 7, 0, 0, 0);
+
+if (jetzt >= kalenderStart && jetzt < kalenderEnde) {
+    testmodus.checked = false;
+    testtag.disabled = true;
+    testbereich.style.display = "none";
+} else {
+    testbereich.style.display = "";
+}
 testmodus.addEventListener(
     "change",
     () => {
