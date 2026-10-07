@@ -1270,7 +1270,7 @@ function tuerchenErzeugen() {
 const testbereich = document.getElementById("testbereich");
 const jetzt = new Date();
 
-const kalenderStart = new Date(2026, 11, 1, 0, 0, 0);
+const kalenderStart = new Date(2026, 10, 30, 0, 0, 0);
 const kalenderEnde = new Date(2027, 0, 7, 0, 0, 0);
 
 if (jetzt >= kalenderStart && jetzt < kalenderEnde) {
