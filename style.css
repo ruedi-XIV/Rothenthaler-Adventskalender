@@ -1288,7 +1288,7 @@ flex-direction: column;
 
     body {
         justify-content: center;
-        align-items: flex-start;
+        align-items: center;
         padding-top: 0;
         overflow: hidden;
     }
