@@ -1,11 +1,12 @@
 body{
     margin:0;
     background:#0d1b2a;
-    display:flex;
+    display: flex;
+flex-direction: column;
     justify-content:center;
     align-items:center;
     min-height:100vh;
-    overflow:hidden;
+    overflow: auto;
 }
 
 #kalender {
