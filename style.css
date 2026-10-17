@@ -3,7 +3,7 @@ body{
     background:#0d1b2a;
     display: flex;
 flex-direction: column;
-    justify-content:center;
+    justify-content: flex-start;
     align-items:center;
     min-height:100vh;
     overflow: auto;
