@@ -1627,3 +1627,49 @@ flex-direction: column;
 .video-fenster[hidden] {
     display: none !important;
 }
+
+
+/* Lustiges Sprüchefenster */
+#spruch-fenster:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#spruch-box {
+    width: min(90vw, 520px);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: #102744;
+    border: 3px solid #e8bb60;
+    border-radius: 18px;
+    padding: 28px 22px;
+    text-align: center;
+    box-shadow: 0 8px 35px rgba(0, 0, 0, 0.6);
+}
+
+#spruch-text {
+    color: #ffdc89;
+    font-size: clamp(21px, 4vw, 28px);
+    line-height: 1.5;
+    font-weight: bold;
+    margin: 0 0 24px;
+}
+
+#spruch-ok {
+    background: #e8bb60;
+    color: #102744;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 40px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}

@@ -1120,7 +1120,76 @@ function tuerchenAktualisieren() {
    TÜRCHEN ERZEUGEN
    ========================================================= */
 
-function tuerchenErzeugen() {
+
+const sprueche = [
+
+"He, du alter Türknacker! Das is ä Adventskalender un kää Banktresor! Finger weg!",
+"Nu guck när ma aa! Kaum haste dan Kalenner in dr Hand, willste schun alles wissn was drinne is!",
+"Mach när wetter su! Dann bringt dr Weihnachtsmaa dies Gahr bloß en Sack voll Sachspää!",
+"Alarm! Alarm! Hier versucht enner, de Tür vor dr Zeit uffzubrach'n!!",
+"Dr Rothenthaler ward dir für die Ungeduld paar mit'n Knippl uff de Finger kloppm!",
+"Hier werd erscht aufgemacht, wenn dr richtige Tach draa is!",
+"Du brauchst gar ni su heimlich ze klickn! Ich sah dich trotzdam, du Spitzbub!",
+"Nu mach langsam! Weihnachten kimmt sowieso, aah wenn de hunnertmal uff de Tür drückst!",
+"Du bist woll su neigierich, dass de aah noch in dr Kaffeekanne noch Geschenken suchst!",
+"Du bist ja schlimmer wie mei Schwiegermutter! Die will aah immer alles vornewagg wissen!",
+"Noch e Klick auf de falsche Tür un ich zieh dir en Zahn!",
+"Die Tür bleibt erscht emol zu bis se draa is!",
+"Wenn de su wetter machst, häng ich dich statt dr Kugeln an Weihnachtsbaam!",
+"Alle im Dorf wissn's, dass mer de Türn nich vor dr Zeit aufmacht, när du ni!",
+"Noch emol uff de falsche Tür gedrückt, un ich verwandel dich in ä Räächermaa!",
+"Nu hör uff mit dr Klickerei! De Engel ham schon Muskelkater vom Koppschütteln!",
+"Nu lass doch die Tür in Ruh! Du bist ja schlimmer wie mei Gung beim Geschenke auspacken!",
+"Hinner dar Tür gibt's noch nüscht! Du isst doch aah kenn Stolln, wenn dr Dääg noch roh is!",
+"Du hast woll ze viel Glühwein erwischt! Das is des falsche Tür, du alte Schnapsdrossel!",
+"Nu is aber Schluss mit lustig! Noch e Klick, un ich schick dir de Rechnung für'n Türverschleiß!"
+
+];
+
+let letzteSprueche = [];
+
+function naechsterSpruch() {
+    if (letzteSprueche.length === sprueche.length) {
+        letzteSprueche = [];
+    }
+
+    const verfuegbar = sprueche.filter(
+        spruch => !letzteSprueche.includes(spruch)
+    );
+
+    const zufall = Math.floor(Math.random() * verfuegbar.length);
+    const spruch = verfuegbar[zufall];
+
+    letzteSprueche.push(spruch);
+    return spruch;
+}
+
+
+function spieleBoing() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audio = new AudioContext();
+    const oscillator = audio.createOscillator();
+    const lautstaerke = audio.createGain();
+
+    oscillator.type = "sine";
+    oscillator.connect(lautstaerke);
+    lautstaerke.connect(audio.destination);
+
+    const jetzt = audio.currentTime;
+
+    oscillator.frequency.setValueAtTime(500, jetzt);
+    oscillator.frequency.exponentialRampToValueAtTime(120, jetzt + 0.35);
+
+    lautstaerke.gain.setValueAtTime(0.25, jetzt);
+    lautstaerke.gain.exponentialRampToValueAtTime(0.001, jetzt + 0.4);
+
+    oscillator.start(jetzt);
+    oscillator.stop(jetzt + 0.4);
+    oscillator.onended = () => audio.close();
+}
+
+
+   function tuerchenErzeugen() {
 
     container.innerHTML =
         "";
@@ -1233,9 +1302,10 @@ function tuerchenErzeugen() {
                         )
                     ) {
 
-                        alert(
-                            `Dieses Türchen öffnet sich erst am ${tuer.nummer}. Dezember.`
-                        );
+ spieleBoing();                    
+document.getElementById("spruch-text").textContent = naechsterSpruch();
+document.getElementById("spruch-fenster").hidden = false;
+
 
                         return;
                     }
@@ -1368,3 +1438,7 @@ document.addEventListener(
 tuerchenErzeugen();
 
 kalenderDatumAktualisieren();
+// Lustiges Sprüchefenster schließen
+document.getElementById("spruch-ok").addEventListener("click", () => {
+    document.getElementById("spruch-fenster").hidden = true;
+});
