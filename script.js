@@ -233,7 +233,7 @@ function aktuellerKalendertag() {
         new Date();
 
     const monat =
-        heute.getMonth() + 1;
+        heute.getMonth() + 2;
 
     const tag =
         heute.getDate();
@@ -267,8 +267,16 @@ function tuerIstFreigeschaltet(
     nummer
 ) {
 
-    return (
-        aktuellerKalendertag() >=
+    const heute = new Date();
+const monat = heute.getMonth() + 1;
+const tag = heute.getDate();
+
+if ((monat === 12 && tag >= 25) ||
+    (monat === 1 && tag <= 6)) {
+    return true;
+}
+return (
+        aktuellerKalendertag() ===
         nummer
     );
 }
@@ -1270,7 +1278,7 @@ function tuerchenErzeugen() {
 const testbereich = document.getElementById("testbereich");
 const jetzt = new Date();
 
-const kalenderStart = new Date(2026, 10, 30, 0, 0, 0);
+const kalenderStart = new Date(2026, 10, 15, 0, 0, 0);
 const kalenderEnde = new Date(2027, 0, 7, 0, 0, 0);
 
 if (jetzt >= kalenderStart && jetzt < kalenderEnde) {
