@@ -276,7 +276,7 @@ if ((monat === 12 && tag >= 25) ||
     return true;
 }
 return (
-        aktuellerKalendertag() ===
+        aktuellerKalendertag() >=
         nummer
     );
 }
