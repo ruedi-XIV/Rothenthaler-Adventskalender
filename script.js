@@ -233,7 +233,7 @@ function aktuellerKalendertag() {
         new Date();
 
     const monat =
-        heute.getMonth() + 2;
+        heute.getMonth() + 1;
 
     const tag =
         heute.getDate();
